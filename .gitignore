@@ -1,0 +1,36 @@
+# Hackathon rules (Microsoft's material, not ours to republish)
+reglas/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Secrets: never commit real keys. .env.example (placeholders only) IS committed.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+
+# Local / generated data
+data/*.json
+data/*.mp3
+*.log
+
+# Editors / OS / tools
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
