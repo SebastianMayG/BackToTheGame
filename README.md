@@ -1,4 +1,4 @@
-# MatchVoice
+# BackToTheGame
 
 **Live, explainable and personalised match narration from synthetic football events.**
 Built for the Microsoft + Premier League *Inside the Game* Developer Hackathon (2026).
