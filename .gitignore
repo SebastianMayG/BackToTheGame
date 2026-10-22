@@ -18,7 +18,6 @@ frontend/dist/
 # Secrets: never commit real keys. .env.example (placeholders only) IS committed.
 .env
 .env.*
-!.env.example
 *.pem
 *.key
 *.pfx

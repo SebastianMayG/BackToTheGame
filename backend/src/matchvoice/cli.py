@@ -103,6 +103,30 @@ def cmd_narrate(args: argparse.Namespace) -> None:
             print(f"{line.clock:>12s}  [{line.level}] {line.text}")
 
 
+def cmd_ping_foundry(args: argparse.Namespace) -> None:
+    from matchvoice.agents.client import ping
+
+    print(ping(args.prompt))
+
+
+def cmd_ai_narrate(args: argparse.Namespace) -> None:
+    from matchvoice.agents.pipeline import narrate_moment
+
+    m = generate_match(args.seed, args.home, args.away)
+    a = Analyst(m.meta)
+    for ev in m.events:
+        a.process(ev)
+    moments = [x for x in a.moments if x.importance >= args.min and (not args.type or x.type == args.type)]
+    for moment in moments[: args.limit]:
+        result = narrate_moment(moment, args.lang.split(","))
+        print(f"\n[{moment.clock}] {moment.type} ({moment.importance:.2f}): {moment.headline.get('en', '')}")
+        print(f"  source: {result.source}  attempts: {result.attempts}  problems: {result.problems}")
+        if result.explanation:
+            print(f"  why: {result.explanation.why}")
+        for line in result.lines:
+            print(f"  {line.speaker:8s} {line.lang} {line.emotion:12s} {line.text}")
+
+
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")  # Windows consoles default to cp1252
@@ -130,6 +154,17 @@ def main() -> None:
     p.add_argument("--mode", default="fan", choices=["fan", "analyst", "accessible"])
     p.add_argument("--level", type=int, default=2)
     p.set_defaults(fn=cmd_narrate)
+
+    p = sub.add_parser("ping-foundry", help="Send a test prompt to the model deployed in Microsoft Foundry")
+    p.add_argument("--prompt", default="Say hello in one short sentence.")
+    p.set_defaults(fn=cmd_ping_foundry)
+
+    common(p := sub.add_parser("ai-narrate", help="Run the Explainer and Commentator agents on key moments"))
+    p.add_argument("--min", type=float, default=0.6)
+    p.add_argument("--type", default=None)
+    p.add_argument("--limit", type=int, default=2)
+    p.add_argument("--lang", default="en,es")
+    p.set_defaults(fn=cmd_ai_narrate)
 
     args = parser.parse_args()
     args.fn(args)
