@@ -34,3 +34,5 @@ data/*.mp3
 .claude/
 .DS_Store
 Thumbs.db
+
+PROYECTO.md
