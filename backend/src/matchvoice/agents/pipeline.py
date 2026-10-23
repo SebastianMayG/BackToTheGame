@@ -12,8 +12,12 @@ from dataclasses import dataclass, field
 from matchvoice.agents.commentator import commentate
 from matchvoice.agents.explainer import explain
 from matchvoice.agents.guard import check_texts
+from matchvoice.agents.recapper import build_brief
+from matchvoice.agents.recapper import recap as write_recap
 from matchvoice.agents.schema import Commentary, Explanation
-from matchvoice.models import CommentaryLine, Moment
+from matchvoice.engine.analyst import Analyst
+from matchvoice.engine.recap import build_recap
+from matchvoice.models import CommentaryLine, Lang, Moment, Recap, Side
 
 MAX_ATTEMPTS = 2  # first try + one retry with feedback
 
@@ -49,6 +53,38 @@ def _fallback(moment: Moment, langs: list[str]) -> list[CommentaryLine]:
         for lang in langs
         if moment.headline.get(lang)
     ]
+
+
+@dataclass
+class RecapResult:
+    recap: Recap
+    attempts: int = 0
+    latency_ms: int | None = None
+    problems: list[str] = field(default_factory=list)
+
+
+def ai_recap(a: Analyst, kind: str, lang: Lang, fav_side: Side | None = None, since: float = 0.0) -> RecapResult:
+    """Recapper + guard + retry. Any failure returns the template recap (`source` "template")."""
+    template = build_recap(a, kind, lang, fav_side, since)
+    brief = build_brief(a, kind, lang, fav_side, since)
+    evidence = {"facts": brief, "players": [], "clock": ""}
+    started = time.perf_counter()
+    attempts, feedback, problems = 0, None, []
+    try:
+        for _ in range(MAX_ATTEMPTS):
+            attempts += 1
+            candidate = write_recap(brief, feedback)
+            paragraphs = [p.strip() for p in candidate.paragraphs if p.strip()]
+            problems = check_texts(paragraphs, evidence) if paragraphs else ["empty recap"]
+            if not problems:
+                text = "\n".join(paragraphs)
+                latency = round((time.perf_counter() - started) * 1000)
+                return RecapResult(template.model_copy(update={"text": text, "source": "ai"}), attempts, latency)
+            feedback = "; ".join(problems)
+    except Exception as exc:  # network, auth, quota: the template recap is always there
+        problems = [str(exc)[:200]]
+    latency = round((time.perf_counter() - started) * 1000)
+    return RecapResult(template, attempts, latency, problems)
 
 
 def narrate_moment(

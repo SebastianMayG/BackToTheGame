@@ -16,7 +16,10 @@ export function useLayerEvents(types: MatchEvent['type'][]) {
         types.includes(e.type) &&
         e.location &&
         (view.layerTeam === 'both' || e.team === view.layerTeam) &&
-        (!view.layerPlayer || e.player?.id === view.layerPlayer),
+        (!view.layerPlayer || e.player?.id === view.layerPlayer) &&
+        (!view.layerPeriod || e.period === view.layerPeriod) &&
+        (view.layerFrom === null || e.elapsed >= view.layerFrom * 60) &&
+        (view.layerTo === null || e.elapsed <= view.layerTo * 60),
     ),
   )
 

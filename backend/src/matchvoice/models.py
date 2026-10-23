@@ -255,9 +255,61 @@ class Profile(BaseModel):
 class CrewStatus(BaseModel):
     """Health of one AI agent after handling one key moment. Feeds the Crew Panel in the UI."""
 
-    agent: Literal["explainer", "commentator"]
+    agent: Literal["explainer", "commentator", "recapper"]
     moment_id: str
     status: Literal["ok", "fallback", "skipped", "error", "degraded", "disabled"]
     attempts: int = 0
     latency_ms: int | None = None
     problems: list[str] = Field(default_factory=list)
+
+
+class AskRequest(BaseModel):
+    question: str = Field(min_length=2, max_length=300)
+    until_minute: float = Field(ge=0, le=130, description="How far the viewer has watched; nothing later is used")
+    lang: Lang = "en"
+    home: str = "NVR"
+    away: str = "KBY"
+    club: str | None = None
+
+
+class AskResponse(BaseModel):
+    answer: str
+    event_ids: list[str] = Field(default_factory=list)
+    source: Literal["ai", "fallback"] = "ai"
+    tools_used: list[str] = Field(default_factory=list)
+    attempts: int = 0
+    latency_ms: int | None = None
+
+
+class OverlayFilter(BaseModel):
+    team: Side | None = None
+    player_id: str | None = None
+    period: Literal[1, 2] | None = None
+    from_minute: float | None = None
+    to_minute: float | None = None
+
+
+class OverlaySpec(BaseModel):
+    """What the Analyst Query agent asks the pitch to draw. Counts and ids come from the data, not the model."""
+
+    layer: Literal["shot_map", "heatmap", "progressive_passes"]
+    filter: OverlayFilter
+    title: str
+    count: int = 0
+    event_ids: list[str] = Field(default_factory=list)
+
+
+class QueryRequest(BaseModel):
+    query: str = Field(min_length=2, max_length=300)
+    until_minute: float = Field(ge=0, le=130)
+    lang: Lang = "en"
+    home: str = "NVR"
+    away: str = "KBY"
+
+
+class QueryResponse(BaseModel):
+    overlay: OverlaySpec | None = None
+    message: str = ""
+    source: Literal["ai", "fallback"] = "ai"
+    tools_used: list[str] = Field(default_factory=list)
+    latency_ms: int | None = None

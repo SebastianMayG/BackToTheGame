@@ -22,7 +22,10 @@ const close = () => (match.recap = null)
 <template>
   <div v-if="match.recap" class="backdrop" @click.self="close" @keydown.esc="close">
     <div class="modal panel" role="dialog" aria-modal="true" aria-labelledby="recap-title">
-      <p class="kind">{{ t(`recap.${match.recap.kind}`) }}</p>
+      <p class="kind">
+        {{ t(`recap.${match.recap.kind}`) }}
+        <span v-if="match.recap.source === 'ai'" class="ai">{{ t('chat.ai') }}</span>
+      </p>
       <h3 id="recap-title">{{ match.recap.headline }}</h3>
       <p v-for="(para, i) in match.recap.text.split('\n')" :key="i">{{ para }}</p>
       <p v-if="match.recap.player_of_the_match" class="pom">
@@ -56,6 +59,15 @@ const close = () => (match.recap = null)
   letter-spacing: 0.08em;
   font-size: 0.75rem;
   font-weight: 700;
+}
+.ai {
+  margin-left: 6px;
+  border: 1px solid var(--accent-2);
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 0.65rem;
+  color: var(--accent-2);
+  letter-spacing: normal;
 }
 h3 {
   margin: 6px 0 10px;

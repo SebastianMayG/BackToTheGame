@@ -22,3 +22,9 @@ def test_invented_name_is_flagged():
 
 def test_sentence_start_word_is_not_a_name():
     assert check_text("Great finish by Yuto Vukovic!", MOMENT) == []
+
+
+def test_ordinal_minute_of_a_clock_is_allowed():
+    moment = {"clock": "81:47", "players": [], "facts": {}}
+    assert check_text("It came in the 82nd minute, at 81:47.", moment) == []
+    assert check_text("It came in the 85th minute.", moment)

@@ -38,7 +38,7 @@ def _numbers_sentence(a: Analyst, lang: Lang) -> str:
     )
 
 
-def _key_moments(moments: list[Moment], since: float, limit: int) -> list[Moment]:
+def key_moments(moments: list[Moment], since: float, limit: int) -> list[Moment]:
     picked = [m for m in moments if m.elapsed >= since and m.type in _BIG]
     picked.sort(key=lambda m: (-m.importance, m.elapsed))
     return sorted(picked[:limit], key=lambda m: m.elapsed)
@@ -64,7 +64,7 @@ def build_recap(
             else f"Here is what you missed since {_minute(since)}:"
         )
         parts.append(intro)
-        moments = _key_moments(a.moments, since, 5)
+        moments = key_moments(a.moments, since, 5)
         if moments:
             parts.extend(f"{m.clock} — {m.headline.get(lang, '')}" for m in moments)
         else:
@@ -77,7 +77,7 @@ def build_recap(
     else:
         final = kind == "full_time"
         parts.append(_result_sentence(a, lang, final))
-        moments = _key_moments(a.moments, 0.0, 3)
+        moments = key_moments(a.moments, 0.0, 3)
         if moments:
             label = "Momentos clave:" if lang == "es" else "Key moments:"
             parts.append(label + " " + " ".join(f"{m.clock} {m.headline.get(lang, '')}" for m in moments))

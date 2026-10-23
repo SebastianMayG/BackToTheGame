@@ -1,16 +1,43 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { exportUrl } from '@/api/client'
+import { AgentError, exportUrl, queryMatch } from '@/api/client'
 import { playerStats, type LivePlayerStats } from '@/lib/playerStats'
 import { useMatch } from '@/stores/match'
+import { useProfile } from '@/stores/profile'
 import { useView, type Layer } from '@/stores/view'
 
 const { t } = useI18n()
 const match = useMatch()
+const profile = useProfile()
 const view = useView()
 
 const LAYERS: Layer[] = ['none', 'shot_map', 'heatmap', 'progressive']
+
+const request = ref('')
+const querying = ref(false)
+const queryError = ref('')
+
+async function runQuery() {
+  const o = match.options
+  const q = request.value.trim()
+  if (!o || q.length < 2 || querying.value) return
+  querying.value = true
+  queryError.value = ''
+  try {
+    const res = await queryMatch(o, q, match.elapsed / 60, profile.lang)
+    if (res.overlay) {
+      view.applyOverlay(res.overlay)
+      if (res.message) queryError.value = res.message
+    } else {
+      queryError.value = res.message
+    }
+  } catch (err) {
+    queryError.value = t(err instanceof AgentError && err.status === 503 ? 'chat.askOff' : 'chat.askError')
+  } finally {
+    querying.value = false
+  }
+}
 
 const players = computed(() => {
   const m = match.meta
@@ -47,10 +74,29 @@ const compare = computed(() => {
   <section class="panel analyst">
     <h2>📊 {{ t('analyst.title') }}</h2>
 
-    <div class="query">
-      <input type="text" :placeholder="t('analyst.query')" disabled :title="t('analyst.querySoon')" />
-      <small class="muted">{{ t('analyst.querySoon') }}</small>
-    </div>
+    <form class="query" @submit.prevent="runQuery">
+      <div class="qrow">
+        <input
+          v-model="request"
+          type="text"
+          maxlength="300"
+          :placeholder="t('analyst.query')"
+          :aria-label="t('analyst.query')"
+          :disabled="!match.events.length || querying"
+        />
+        <button type="submit" :disabled="!match.events.length || querying || request.trim().length < 2">
+          {{ querying ? '…' : '▶' }}
+        </button>
+      </div>
+      <small v-if="querying" class="muted" role="status">{{ t('analyst.querying') }}</small>
+      <small v-else-if="queryError" class="error" role="alert">{{ queryError }}</small>
+      <div v-else-if="view.overlay" class="applied">
+        <span>
+          🤖 <strong>{{ view.overlay.title }}</strong> · {{ view.overlay.count }} {{ t('analyst.events') }}
+        </span>
+        <button type="button" :aria-label="t('analyst.clear')" @click="view.clearOverlay()">✕</button>
+      </div>
+    </form>
 
     <fieldset>
       <legend>{{ t('analyst.layers') }}</legend>
@@ -60,7 +106,7 @@ const compare = computed(() => {
           :key="l"
           :class="{ active: view.layer === l }"
           :aria-pressed="view.layer === l"
-          @click="view.layer = l"
+          @click="view.setLayer(l)"
         >
           {{ t(l === 'none' ? 'analyst.none' : `analyst.${l}`) }}
         </button>
@@ -126,6 +172,24 @@ const compare = computed(() => {
 }
 .query small {
   font-size: 0.7rem;
+}
+.qrow {
+  display: flex;
+  gap: 6px;
+}
+.qrow input {
+  flex: 1;
+  min-width: 0;
+}
+.error {
+  color: var(--danger);
+}
+.applied {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
 }
 fieldset {
   border: 1px solid var(--line);

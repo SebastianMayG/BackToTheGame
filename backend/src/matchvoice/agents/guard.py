@@ -7,6 +7,7 @@ from typing import Any
 
 NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
 WORD = re.compile(r"[^\W\d_]+(?:['’][^\W\d_]+)?", re.UNICODE)
+CLOCK_MINUTE = re.compile(r"(\d+):\d{2}")
 SENTENCE_START = re.compile(r"(?:^|[.!?¡¿:]\s*)$")
 
 # Football terms that are written in capitals but are not names.
@@ -37,11 +38,24 @@ def _words_in(value: Any) -> set[str]:
     return set()
 
 
+def _strings_in(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [s for v in value.values() for s in _strings_in(v)]
+    if isinstance(value, (list, tuple)):
+        return [s for v in value for s in _strings_in(v)]
+    return []
+
+
 def allowed_numbers(moment: dict) -> set[float]:
     """Facts, the clock, and the usual roundings of each fact (xG 0.179 -> 0.18 -> 18%)."""
     allowed: set[float] = set()
     for v in _numbers_in(moment.get("facts", {})) + _numbers_in(moment.get("clock", "")):
         allowed.update({v, round(v), round(v, 1), round(v, 2), round(v, 3), round(v * 100), round(v * 100, 1)})
+    # A goal at 81:47 is in the 82nd minute: commentators say it that way, so mm+1 is allowed too.
+    for s in _strings_in(moment.get("facts", {})) + _strings_in(moment.get("clock", "")):
+        allowed.update(int(m) + 1 for m in CLOCK_MINUTE.findall(s))
     return allowed
 
 

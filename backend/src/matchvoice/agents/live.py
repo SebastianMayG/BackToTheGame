@@ -12,8 +12,9 @@ import os
 from typing import Any
 
 from matchvoice.agents.client import load_env
-from matchvoice.agents.pipeline import MomentResult, narrate_moment
-from matchvoice.models import CrewStatus, Lang, Moment
+from matchvoice.agents.pipeline import MomentResult, ai_recap, narrate_moment
+from matchvoice.engine.analyst import Analyst
+from matchvoice.models import CrewStatus, Lang, Moment, Recap, Side
 
 log = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ MAX_FAILURES = 3  # consecutive failures before the crew goes to degraded mode
 CONCURRENT_CALLS = 2  # per stream, so a burst of moments does not flood the model
 EXCLUDED = {"half_time", "full_time"}  # the Recapper handles these
 FINISH_TIMEOUT = 20.0
+RECAP_TIMEOUT = 15.0  # the stream waits this long for the Recapper at half time and full time
 
 _active_streams = 0
 
@@ -133,6 +135,35 @@ class LiveCrew:
                 self._out.put_nowait(("commentary", line.model_dump_json()))
         for st in _statuses(moment.id, result):
             self._out.put_nowait(("crew_status", st.model_dump_json()))
+
+    async def recap(self, analyst: Analyst, kind: str, fav_side: Side | None) -> Recap | None:
+        """AI recap for half time or full time, or None to keep the template one."""
+        if not self.enabled or self.failures >= MAX_FAILURES:
+            return None
+        moment_id = f"recap-{kind}"
+        try:
+            result = await asyncio.wait_for(
+                asyncio.to_thread(ai_recap, analyst, kind, self.lang, fav_side), RECAP_TIMEOUT
+            )
+        except Exception as exc:  # includes the timeout
+            log.warning("Recapper failed on %s: %s", kind, exc)
+            self.failures += 1
+            problems = [str(exc)[:200] or "timeout"]
+            status = CrewStatus(agent="recapper", moment_id=moment_id, status="error", problems=problems)
+            self._out.put_nowait(("crew_status", status.model_dump_json()))
+            return None
+        ok = result.recap.source == "ai"
+        self.failures = 0 if ok else self.failures + 1
+        status = CrewStatus(
+            agent="recapper",
+            moment_id=moment_id,
+            status="ok" if ok else "fallback",
+            attempts=result.attempts,
+            latency_ms=result.latency_ms,
+            problems=[] if ok else result.problems,
+        )
+        self._out.put_nowait(("crew_status", status.model_dump_json()))
+        return result.recap if ok else None
 
     def drain(self) -> list[tuple[str, str]]:
         """Results that finished since the last call, as (event name, json) pairs."""

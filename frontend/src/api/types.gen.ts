@@ -248,7 +248,7 @@ export interface components {
              * Agent
              * @enum {string}
              */
-            agent: "explainer" | "commentator";
+            agent: "explainer" | "commentator" | "recapper";
             /** Moment Id */
             moment_id: string;
             /**
@@ -265,6 +265,67 @@ export interface components {
             latency_ms?: number | null;
             /** Problems */
             problems?: string[];
+        };
+        /** AskResponse */
+        AskResponse: {
+            /** Answer */
+            answer: string;
+            /** Event Ids */
+            event_ids?: string[];
+            /**
+             * Source
+             * @default ai
+             * @enum {string}
+             */
+            source: "ai" | "fallback";
+            /** Tools Used */
+            tools_used?: string[];
+            /** Latency Ms */
+            latency_ms?: number | null;
+        };
+        /** OverlayFilter */
+        OverlayFilter: {
+            team?: ("home" | "away") | null;
+            /** Player Id */
+            player_id?: string | null;
+            period?: (1 | 2) | null;
+            /** From Minute */
+            from_minute?: number | null;
+            /** To Minute */
+            to_minute?: number | null;
+        };
+        /**
+         * OverlaySpec
+         * @description What the Analyst Query agent asks the pitch to draw. Counts and ids come from the data, not the model.
+         */
+        OverlaySpec: {
+            /**
+             * Layer
+             * @enum {string}
+             */
+            layer: "shot_map" | "heatmap" | "progressive_passes";
+            filter: components["schemas"]["OverlayFilter"];
+            /** Title */
+            title: string;
+            /** Count */
+            count: number;
+            /** Event Ids */
+            event_ids?: string[];
+        };
+        /** QueryResponse */
+        QueryResponse: {
+            overlay?: components["schemas"]["OverlaySpec"] | null;
+            /** Message */
+            message: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "ai" | "fallback";
+            /** Tools Used */
+            tools_used?: string[];
+            /** Latency Ms */
+            latency_ms?: number | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {

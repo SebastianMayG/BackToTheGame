@@ -127,6 +127,54 @@ def cmd_ai_narrate(args: argparse.Namespace) -> None:
             print(f"  {line.speaker:8s} {line.lang} {line.emotion:12s} {line.text}")
 
 
+def cmd_ai_recap(args: argparse.Namespace) -> None:
+    from matchvoice.agents.pipeline import ai_recap
+
+    m = generate_match(args.seed, args.home, args.away)
+    a = Analyst(m.meta)
+    for ev in m.events:
+        if ev.elapsed > args.until * 60:
+            break
+        a.process(ev)
+    fav = args.club if args.club in ("home", "away") else None
+    result = ai_recap(a, args.kind, args.lang, fav, since=args.since * 60)
+    r = result.recap
+    print(f"\n[{r.kind}] {r.headline}  source: {r.source}  attempts: {result.attempts}  {result.latency_ms} ms")
+    if result.problems:
+        print(f"  problems: {result.problems}")
+    print(r.text)
+
+
+def cmd_ai_ask(args: argparse.Namespace) -> None:
+    from matchvoice.agents.qa import ask
+    from matchvoice.models import AskRequest
+
+    req = AskRequest(question=args.question, until_minute=args.until, lang=args.lang, home=args.home, away=args.away)
+    res = ask(req, args.seed)
+    print(f"\n[{res.source}] attempts: {res.attempts}  {res.latency_ms} ms  tools: {res.tools_used}")
+    print(res.answer)
+    if res.event_ids:
+        print(f"evidence: {res.event_ids}")
+
+
+def cmd_ai_query(args: argparse.Namespace) -> None:
+    from matchvoice.agents.analyst_query import query
+    from matchvoice.models import QueryRequest
+
+    req = QueryRequest(query=args.request, until_minute=args.until, lang=args.lang, home=args.home, away=args.away)
+    res = query(req, args.seed)
+    print(f"\n[{res.source}] {res.latency_ms} ms  tools: {res.tools_used}")
+    if res.overlay:
+        print(res.overlay.model_dump_json(exclude={"event_ids"}, indent=1))
+    print(res.message)
+
+
+def cmd_mcp(args: argparse.Namespace) -> None:
+    from matchvoice.mcp_server.server import main as serve
+
+    serve()
+
+
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")  # Windows consoles default to cp1252
@@ -165,6 +213,29 @@ def main() -> None:
     p.add_argument("--limit", type=int, default=2)
     p.add_argument("--lang", default="en,es")
     p.set_defaults(fn=cmd_ai_narrate)
+
+    common(p := sub.add_parser("ai-recap", help="Run the Recapper agent at a given minute"))
+    p.add_argument("--kind", default="half_time", choices=["half_time", "full_time", "catch_up"])
+    p.add_argument("--until", type=float, default=45, help="match minute to stop at")
+    p.add_argument("--since", type=float, default=0, help="catch_up: minute to summarise from")
+    p.add_argument("--lang", default="es", choices=["es", "en"])
+    p.add_argument("--club", default=None, help="home or away: favourite side")
+    p.set_defaults(fn=cmd_ai_recap)
+
+    common(p := sub.add_parser("ai-ask", help="Ask the Chat Q&A agent a question"))
+    p.add_argument("question")
+    p.add_argument("--until", type=float, default=60, help="match minute the viewer has reached")
+    p.add_argument("--lang", default="en", choices=["es", "en"])
+    p.set_defaults(fn=cmd_ai_ask)
+
+    common(p := sub.add_parser("ai-query", help="Ask the Analyst Query agent for a pitch layer"))
+    p.add_argument("request")
+    p.add_argument("--until", type=float, default=60)
+    p.add_argument("--lang", default="en", choices=["es", "en"])
+    p.set_defaults(fn=cmd_ai_query)
+
+    p = sub.add_parser("mcp", help="Run the MCP server (stdio) with the match-data tools")
+    p.set_defaults(fn=cmd_mcp)
 
     args = parser.parse_args()
     args.fn(args)

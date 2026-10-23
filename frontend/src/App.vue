@@ -48,6 +48,7 @@ function newMatch() {
   match.stop()
   voice.cancel()
   match.reset()
+  view.clearOverlay()
   match.status = 'idle'
 }
 

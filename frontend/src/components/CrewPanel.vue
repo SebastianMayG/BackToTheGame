@@ -7,7 +7,7 @@ import { useMatch } from '@/stores/match'
 const { t } = useI18n()
 const match = useMatch()
 
-const AGENTS: CrewStatus['agent'][] = ['explainer', 'commentator']
+const AGENTS: CrewStatus['agent'][] = ['explainer', 'commentator', 'recapper']
 
 const rows = computed(() =>
   AGENTS.map((agent) => {

@@ -1,4 +1,4 @@
-import type { Club, Lang, Mode, Recap } from './types'
+import type { AskResponse, Club, Lang, Mode, QueryResponse, Recap } from './types'
 
 export interface MatchSetup {
   seed: number
@@ -45,9 +45,36 @@ export function fetchCatchup(
   since: number,
   lang: Lang,
   club: string | null,
+  ai = false,
 ): Promise<Recap> {
-  const q = query({ home: setup.home, away: setup.away, until, since, lang, club })
+  const q = query({ home: setup.home, away: setup.away, until, since, lang, club, ai })
   return getJson<Recap>(`/api/matches/${setup.seed}/catchup?${q}`)
+}
+
+export class AgentError extends Error {
+  constructor(readonly status: number) {
+    super(`agent returned ${status}`)
+  }
+}
+
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  if (!res.ok) throw new AgentError(res.status)
+  return (await res.json()) as T
+}
+
+/** Chat Q&A: the agent answers from the match data up to `untilMinute`. */
+export function askMatch(setup: MatchSetup, question: string, untilMinute: number, lang: Lang, club: string | null) {
+  return postJson<AskResponse>(`/api/matches/${setup.seed}/ask`, {
+    question, until_minute: untilMinute, lang, home: setup.home, away: setup.away, club,
+  })
+}
+
+/** Analyst Query: natural language in, a pitch layer (OverlaySpec) out. */
+export function queryMatch(setup: MatchSetup, request: string, untilMinute: number, lang: Lang) {
+  return postJson<QueryResponse>(`/api/matches/${setup.seed}/query`, {
+    query: request, until_minute: untilMinute, lang, home: setup.home, away: setup.away,
+  })
 }
 
 export function exportUrl(setup: MatchSetup, format: 'csv' | 'json'): string {

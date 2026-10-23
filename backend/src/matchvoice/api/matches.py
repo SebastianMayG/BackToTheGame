@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from matchvoice.agents.live import LiveCrew, is_configured
+from matchvoice.agents.pipeline import ai_recap
 from matchvoice.engine.analyst import Analyst
 from matchvoice.engine.clubs import all_clubs
 from matchvoice.engine.generator import generate_match
@@ -134,10 +135,14 @@ def catchup(
     away: str = "KBY",
     lang: Lang = "es",
     club: str | None = None,
+    ai: bool = Query(False, description="Write the summary with the Recapper agent"),
 ) -> Recap:
     m = get_match(seed, home, away)
     a = _replay(m, until)
-    return build_recap(a, "catch_up", lang, _fav_side(m.meta, club), since=since)
+    fav_side = _fav_side(m.meta, club)
+    if ai and is_configured():
+        return ai_recap(a, "catch_up", lang, fav_side, since).recap
+    return build_recap(a, "catch_up", lang, fav_side, since=since)
 
 
 @router.get("/matches/{seed}/export")
@@ -301,7 +306,7 @@ async def stream(
                 yield {"event": "stats", "id": sid, "data": analyst.snapshot().model_dump_json()}
             if ev.type == "period_end":
                 kind = "half_time" if ev.data["period"] == 1 else "full_time"
-                recap = build_recap(analyst, kind, lang, fav_side)
+                recap = await crew.recap(analyst, kind, fav_side) or build_recap(analyst, kind, lang, fav_side)
                 yield {"event": "recap", "id": sid, "data": recap.model_dump_json()}
         for name, data in await crew.finish():
             yield {"event": name, "data": data}

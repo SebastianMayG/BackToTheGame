@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from matchvoice import __version__
+from matchvoice.api.agents import router as agents_router
 from matchvoice.api.matches import router as matches_router
 from matchvoice.api.voice import router as voice_router
 
@@ -27,6 +28,7 @@ app.add_middleware(
 )
 
 app.include_router(matches_router)
+app.include_router(agents_router)
 app.include_router(voice_router)
 
 # In the container the built frontend sits next to the backend (see Dockerfile).
