@@ -129,6 +129,14 @@ watch(
         </label>
       </div>
 
+      <label class="ai-toggle">
+        <input v-model="profile.ai" type="checkbox" />
+        <span>
+          <strong>{{ t('setup.ai') }}</strong>
+          <small>{{ t('setup.aiHint') }}</small>
+        </span>
+      </label>
+
       <button type="submit" class="primary start" :disabled="!clubs.length">{{ t('setup.start') }} ▶</button>
     </form>
   </main>
@@ -205,6 +213,23 @@ label input {
   padding: 12px;
 }
 .mode small {
+  color: var(--muted);
+}
+.ai-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--text);
+}
+.ai-toggle input {
+  width: auto;
+  margin-top: 3px;
+}
+.ai-toggle span {
+  display: grid;
+  gap: 2px;
+}
+.ai-toggle small {
   color: var(--muted);
 }
 .start {

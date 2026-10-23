@@ -15,6 +15,7 @@ export type TeamStats = S['TeamStats']
 export type PlayerStats = S['PlayerStats']
 export type CommentaryLine = S['CommentaryLine']
 export type Recap = S['Recap']
+export type CrewStatus = S['CrewStatus']
 export type Location = S['Location']
 
 export type Side = 'home' | 'away'

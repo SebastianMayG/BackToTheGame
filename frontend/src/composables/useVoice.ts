@@ -3,8 +3,9 @@ import type { CommentaryLine, Level } from '@/api/types'
 import { useMatch } from '@/stores/match'
 import { useProfile } from '@/stores/profile'
 
-// Voice commentary. For now it uses the browser's speech synthesis; the Azure AI Speech
-// backend (/api/voice, two neural voices with SSML emotion) will plug in behind `speak()`.
+// Voice commentary. Azure AI Speech (POST /api/voice) reads every line with the narrator's neural voice
+// and turns the line's emotion into prosody. If the server has no Speech or it fails, the browser's
+// speech synthesis takes over, so the commentary is never silent.
 
 const LOCALES = { es: ['es-MX', 'es-ES', 'es-US', 'es'], en: ['en-GB', 'en-US', 'en'] } as const
 const MAX_QUEUE = 3
@@ -23,14 +24,42 @@ const clean = (text: string) => text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27
 export function useVoice() {
   const profile = useProfile()
   const match = useMatch()
-  const supported = typeof window !== 'undefined' && 'speechSynthesis' in window
+  const supported = typeof window !== 'undefined' && ('speechSynthesis' in window || 'Audio' in window)
   let queue: CommentaryLine[] = []
   let speaking = false
+  let azureDown = false // after one failure stay on the browser voice for the rest of the session
+  let audio: HTMLAudioElement | null = null
+  let generation = 0 // bumped by cancel() so late results of an old line are ignored
 
-  const threshold = (): Level => (profile.mode === 'accessible' ? 2 : 1)
+  /** Play one line with Azure AI Speech. Returns false when it could not, so the caller falls back. */
+  async function speakAzure(line: CommentaryLine): Promise<boolean> {
+    try {
+      const res = await fetch('/api/voice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: clean(line.text), speaker: 'narrator', lang: line.lang, emotion: line.emotion }),
+      })
+      if (!res.ok) return false
+      const url = URL.createObjectURL(await res.blob())
+      await new Promise<void>((resolve, reject) => {
+        const a = new Audio(url)
+        audio = a
+        a.onended = () => resolve()
+        a.onerror = () => reject(new Error('audio'))
+        a.play().catch(reject)
+      })
+      URL.revokeObjectURL(url)
+      return true
+    } catch {
+      return false
+    } finally {
+      audio = null
+    }
+  }
 
-  function speak(line: CommentaryLine): Promise<void> {
+  function speakBrowser(line: CommentaryLine): Promise<void> {
     return new Promise((resolve) => {
+      if (!('speechSynthesis' in window)) return resolve()
       const u = new SpeechSynthesisUtterance(clean(line.text))
       const voices = pickVoices(line.lang)
       // narrator and pundit get different voices when the browser offers more than one
@@ -45,11 +74,22 @@ export function useVoice() {
     })
   }
 
+  async function speak(line: CommentaryLine, gen: number): Promise<void> {
+    if (!azureDown) {
+      if (await speakAzure(line)) return
+      if (gen !== generation) return // cancelled while loading: not an Azure failure
+      azureDown = true
+    }
+    await speakBrowser(line)
+  }
+
   async function pump() {
     if (speaking || !queue.length) return
     speaking = true
+    const gen = generation
     const line = queue.shift()!
-    await speak(line)
+    await speak(line, gen)
+    if (gen !== generation) return // cancel() already reset the state
     speaking = false
     void pump()
   }
@@ -63,13 +103,22 @@ export function useVoice() {
 
   const off = match.onLine((line) => {
     if (!supported || !profile.voice) return
-    if (line.lang !== profile.lang || line.level > threshold()) return
+    if (line.lang !== profile.lang) return
+    // one voice: it reads the big moments and every line the AI narrator wrote
+    if (line.level > threshold() && line.source !== 'ai') return
     enqueue(line)
   })
 
+  function threshold(): Level {
+    return profile.mode === 'accessible' ? 2 : 1
+  }
+
   function cancel() {
+    generation++
     queue = []
-    if (supported) window.speechSynthesis.cancel()
+    audio?.pause()
+    audio = null
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
     speaking = false
   }
 

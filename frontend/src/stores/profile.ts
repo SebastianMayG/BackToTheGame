@@ -16,6 +16,7 @@ interface SavedProfile {
   seed: number
   home: string
   away: string
+  ai: boolean
 }
 
 const defaults: SavedProfile = {
@@ -30,6 +31,7 @@ const defaults: SavedProfile = {
   seed: 42,
   home: 'NVR',
   away: 'KBY',
+  ai: false, // the AI crew costs model calls, so it is opt-in
 }
 
 function load(): SavedProfile {
@@ -55,9 +57,10 @@ export const useProfile = defineStore('profile', () => {
   const seed = ref(saved.seed)
   const home = ref(saved.home)
   const away = ref(saved.away)
+  const ai = ref(saved.ai)
 
   watch(
-    [lang, mode, club, player, intensity, voice, names, speed, seed, home, away],
+    [lang, mode, club, player, intensity, voice, names, speed, seed, home, away, ai],
     () => {
       try {
         localStorage.setItem(
@@ -65,7 +68,7 @@ export const useProfile = defineStore('profile', () => {
           JSON.stringify({
             lang: lang.value, mode: mode.value, club: club.value, player: player.value,
             intensity: intensity.value, voice: voice.value, names: names.value, speed: speed.value,
-            seed: seed.value, home: home.value, away: away.value,
+            seed: seed.value, home: home.value, away: away.value, ai: ai.value,
           } satisfies SavedProfile),
         )
       } catch {
@@ -74,5 +77,5 @@ export const useProfile = defineStore('profile', () => {
     },
   )
 
-  return { lang, mode, club, player, intensity, voice, names, speed, seed, home, away }
+  return { lang, mode, club, player, intensity, voice, names, speed, seed, home, away, ai }
 })

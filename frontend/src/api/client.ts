@@ -12,6 +12,7 @@ export interface StreamOptions extends MatchSetup {
   mode: Mode
   club: string | null
   player: string | null
+  ai?: boolean
   from_seq?: number
 }
 
@@ -21,7 +22,7 @@ async function getJson<T>(url: string): Promise<T> {
   return (await res.json()) as T
 }
 
-function query(params: Record<string, string | number | null | undefined>): string {
+function query(params: Record<string, string | number | boolean | null | undefined>): string {
   const q = new URLSearchParams()
   for (const [k, v] of Object.entries(params)) {
     if (v !== null && v !== undefined && v !== '') q.set(k, String(v))

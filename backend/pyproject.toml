@@ -10,6 +10,7 @@ dependencies = [
     "pydantic>=2.9,<3.0",
     "azure-identity>=1.26.0",
     "azure-ai-projects>=2.9.0",
+    "httpx>=0.28.1",
 ]
 
 [dependency-groups]

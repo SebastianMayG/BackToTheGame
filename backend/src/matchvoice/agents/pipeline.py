@@ -6,6 +6,7 @@ feedback; if it fails again, the template headline is used instead.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 
 from matchvoice.agents.commentator import commentate
@@ -23,6 +24,7 @@ class MomentResult:
     explanation: Explanation | None = None
     source: str = "ai"  # "ai" or "template" (fallback)
     attempts: dict[str, int] = field(default_factory=dict)
+    latency_ms: dict[str, int] = field(default_factory=dict)
     problems: list[str] = field(default_factory=list)
 
 
@@ -58,6 +60,8 @@ def narrate_moment(
     langs = langs or ["en", "es"]
     data = moment.model_dump()
     attempts = {"explainer": 0, "commentator": 0}
+    latency: dict[str, int] = {}
+    started = time.perf_counter()
 
     explanation: Explanation | None = None
     feedback = None
@@ -69,8 +73,11 @@ def narrate_moment(
             explanation = candidate
             break
         feedback = "; ".join(problems)
+    latency["explainer"] = round((time.perf_counter() - started) * 1000)
     if explanation is None:
-        return MomentResult(_fallback(moment, langs), None, "template", attempts, problems)
+        return MomentResult(_fallback(moment, langs), None, "template", attempts, latency, problems)
+
+    started = time.perf_counter()
 
     commentary: Commentary | None = None
     feedback = None
@@ -82,8 +89,9 @@ def narrate_moment(
             commentary = candidate
             break
         feedback = "; ".join(problems)
+    latency["commentator"] = round((time.perf_counter() - started) * 1000)
     if commentary is None:
-        return MomentResult(_fallback(moment, langs), explanation, "template", attempts, problems)
+        return MomentResult(_fallback(moment, langs), explanation, "template", attempts, latency, problems)
 
     level = 1 if moment.importance >= 0.75 else 2
     lines = [
@@ -92,7 +100,7 @@ def narrate_moment(
             moment_id=moment.id,
             elapsed=moment.elapsed,
             clock=moment.clock,
-            speaker=ln.speaker,
+            speaker="narrator",  # one voice for the whole broadcast
             level=level,
             lang=ln.lang,
             text=ln.text,
@@ -101,4 +109,4 @@ def narrate_moment(
         )
         for i, ln in enumerate(commentary.lines)
     ]
-    return MomentResult(lines, explanation, "ai", attempts)
+    return MomentResult(lines, explanation, "ai", attempts, latency)

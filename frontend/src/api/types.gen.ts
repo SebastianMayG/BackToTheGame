@@ -239,6 +239,33 @@ export interface components {
              */
             source: "template" | "ai";
         };
+        /**
+         * CrewStatus
+         * @description Health of one AI agent after handling one key moment. Feeds the Crew Panel in the UI.
+         */
+        CrewStatus: {
+            /**
+             * Agent
+             * @enum {string}
+             */
+            agent: "explainer" | "commentator";
+            /** Moment Id */
+            moment_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "fallback" | "skipped" | "error" | "degraded" | "disabled";
+            /**
+             * Attempts
+             * @default 0
+             */
+            attempts: number;
+            /** Latency Ms */
+            latency_ms?: number | null;
+            /** Problems */
+            problems?: string[];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */

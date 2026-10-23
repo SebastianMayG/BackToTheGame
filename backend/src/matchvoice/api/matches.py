@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import csv
 import io
+import json
 from collections.abc import AsyncIterator
 from functools import lru_cache
 from typing import Any, Literal
@@ -14,6 +15,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
+from matchvoice.agents.live import LiveCrew, is_configured
 from matchvoice.engine.analyst import Analyst
 from matchvoice.engine.clubs import all_clubs
 from matchvoice.engine.generator import generate_match
@@ -22,6 +24,7 @@ from matchvoice.engine.recap import build_recap
 from matchvoice.models import (
     Club,
     CommentaryLine,
+    CrewStatus,
     Lang,
     Match,
     MatchEvent,
@@ -102,7 +105,7 @@ class AnalysisResponse(BaseModel):
 
 @router.get("/health")
 def health() -> dict[str, Any]:
-    return {"status": "ok", "agents": "not_configured"}
+    return {"status": "ok", "agents": "configured" if is_configured() else "not_configured"}
 
 
 @router.get("/clubs", response_model=ClubsResponse)
@@ -197,6 +200,7 @@ class StreamContract(BaseModel):
     pbp: CommentaryLine
     moment: Moment | None
     commentary: CommentaryLine | None
+    crew_status: CrewStatus
     stats: StatsSnapshot
     recap: Recap
 
@@ -224,6 +228,7 @@ def stream_contract() -> StreamContract:
         pbp=sample_line,
         moment=sample_moment,
         commentary=_pundit_line(sample_moment, "es") if sample_moment else None,
+        crew_status=CrewStatus(agent="explainer", moment_id="m1", status="ok", attempts=1, latency_ms=1200),
         stats=a.snapshot(),
         recap=build_recap(a, "half_time", "es"),
     )
@@ -241,8 +246,9 @@ async def stream(
     club: str | None = None,
     player: str | None = None,
     from_seq: int = Query(0, ge=0, description="Resume after this event (e.g. after switching language or mode)"),
+    ai: bool = Query(False, description="Add AI commentary (Explainer + Commentator) on key moments"),
 ) -> EventSourceResponse:
-    """Live replay as SSE: `meta`, `match_event`, `pbp`, `moment`, `commentary`, `stats`, `recap`, `end`."""
+    """Live replay as SSE: meta, match_event, pbp, moment, commentary, crew_status, stats, recap, end."""
     m = get_match(seed, home, away)
     fav_side = _fav_side(m.meta, club)
     ctx = NarrationContext(meta=m.meta, lang=lang, mode=mode, fav_side=fav_side, fav_player=player)
@@ -253,8 +259,16 @@ async def stream(
     resume_seq = max(resume_seq, from_seq)
 
     async def events() -> AsyncIterator[dict[str, str]]:
+        with LiveCrew(lang, enabled=ai) as crew:
+            async for item in replay(crew):
+                yield item
+
+    async def replay(crew: LiveCrew) -> AsyncIterator[dict[str, str]]:
         analyst = Analyst(m.meta)
         yield {"event": "meta", "data": m.meta.model_dump_json()}
+        if ai and not crew.enabled:
+            disabled = {"agent": "crew", "status": "disabled", "reason": crew.reason}
+            yield {"event": "crew_status", "data": json.dumps(disabled)}
         prev: float | None = None
         last_stats = -1e9
         for ev in m.events:
@@ -270,6 +284,8 @@ async def stream(
             if replaying:
                 continue
             sid = str(ev.seq)
+            for name, data in crew.drain():
+                yield {"event": name, "id": sid, "data": data}
             yield {"event": "match_event", "id": sid, "data": ev.model_dump_json()}
             line = narrate_event(ev, ctx)
             if line:
@@ -279,6 +295,7 @@ async def stream(
                 pundit = _pundit_line(mo, lang)
                 if pundit:
                     yield {"event": "commentary", "id": sid, "data": pundit.model_dump_json()}
+                crew.submit(mo)
             if moments or ev.elapsed - last_stats >= 10:
                 last_stats = ev.elapsed
                 yield {"event": "stats", "id": sid, "data": analyst.snapshot().model_dump_json()}
@@ -286,6 +303,8 @@ async def stream(
                 kind = "half_time" if ev.data["period"] == 1 else "full_time"
                 recap = build_recap(analyst, kind, lang, fav_side)
                 yield {"event": "recap", "id": sid, "data": recap.model_dump_json()}
+        for name, data in await crew.finish():
+            yield {"event": name, "data": data}
         yield {"event": "end", "data": "{}"}
 
     return EventSourceResponse(events(), ping=15)

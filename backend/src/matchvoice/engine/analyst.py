@@ -507,7 +507,7 @@ class Analyst:
             if side != self._last_swing_side and self._ready("momentum_swing", 360):
                 self._last_swing_side = side
                 share = round((1 + abs(mom)) / 2 * 100)
-                self._moment("momentum_swing", 0.6, ev, side, [], {"share": share, "momentum": mom})
+                self._moment("momentum_swing", 0.6, ev, side, [], {"threat_share_pct": share})
 
         # Rhythm shift: control vs chaos.
         rhythm = self.rhythm()

@@ -250,3 +250,14 @@ class Profile(BaseModel):
     mode: Mode = "fan"
     club: str | None = None  # club id
     player: str | None = None  # player id
+
+
+class CrewStatus(BaseModel):
+    """Health of one AI agent after handling one key moment. Feeds the Crew Panel in the UI."""
+
+    agent: Literal["explainer", "commentator"]
+    moment_id: str
+    status: Literal["ok", "fallback", "skipped", "error", "degraded", "disabled"]
+    attempts: int = 0
+    latency_ms: int | None = None
+    problems: list[str] = Field(default_factory=list)

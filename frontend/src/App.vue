@@ -12,6 +12,7 @@ import FavoritePlayerCard from '@/components/FavoritePlayerCard.vue'
 import MomentumChart from '@/components/MomentumChart.vue'
 import PitchView from '@/components/pitch/PitchView.vue'
 import RecapModal from '@/components/RecapModal.vue'
+import CrewPanel from '@/components/CrewPanel.vue'
 import ScoreBar from '@/components/ScoreBar.vue'
 import SetupScreen from '@/components/SetupScreen.vue'
 import StatsPanel from '@/components/StatsPanel.vue'
@@ -35,6 +36,7 @@ function streamOptions() {
     mode: profile.mode,
     club: profile.club,
     player: profile.player,
+    ai: profile.ai,
   }
 }
 
@@ -88,6 +90,7 @@ onMounted(() => {
   if (MODES.includes(q.get('mode') as Mode)) profile.mode = q.get('mode') as Mode
   if (q.has('club')) profile.club = str('club')
   if (q.has('player')) profile.player = str('player')
+  if (q.has('ai')) profile.ai = q.get('ai') !== '0'
   const layer = q.get('layer') as Layer | null
   if (layer && ['none', 'shot_map', 'heatmap', 'progressive'].includes(layer)) view.layer = layer
   if (q.has('autostart')) start()
@@ -125,6 +128,7 @@ onMounted(() => {
 
       <div class="panels">
         <FavoritePlayerCard v-if="profile.player" />
+        <CrewPanel v-if="profile.ai" />
         <AnalystPanel v-if="profile.mode === 'analyst'" />
         <MomentumChart />
         <StatsPanel />

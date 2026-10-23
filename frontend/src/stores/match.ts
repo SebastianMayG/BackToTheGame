@@ -3,6 +3,7 @@ import { computed, ref, shallowRef, triggerRef } from 'vue'
 import { streamUrl, type StreamOptions } from '@/api/client'
 import type {
   CommentaryLine,
+  CrewStatus,
   Location,
   MatchEvent,
   MatchMeta,
@@ -18,6 +19,7 @@ export type Status = 'idle' | 'connecting' | 'live' | 'ended' | 'error'
 
 const STARTING_ROLES = ['GK', 'RB', 'RCB', 'LCB', 'LB', 'DM', 'RCM', 'LCM', 'RW', 'ST', 'LW']
 const MAX_LINES = 400
+const MAX_CREW = 120
 
 type LineListener = (line: CommentaryLine) => void
 
@@ -44,6 +46,8 @@ export const useMatch = defineStore('match', () => {
   const stats = ref<StatsSnapshot | null>(null)
   const momentumHistory = ref<{ elapsed: number; value: number }[]>([])
   const recap = ref<Recap | null>(null)
+  const crew = ref<CrewStatus[]>([]) // latest status per agent and moment, in arrival order
+  const crewDisabled = ref('') // why the server did not start the AI crew, if it did not
   const lineups = ref<Record<Side, Lineup>>({ home: {}, away: {} })
   const ball = ref<Location>({ x: 52.5, y: 34 })
   const carrierId = ref<string | null>(null)
@@ -64,9 +68,27 @@ export const useMatch = defineStore('match', () => {
 
   function pushLine(line: CommentaryLine) {
     if (lines.value.some((l) => l.id === line.id)) return // a reconnect may resend the last event
+    if (line.source === 'ai' && line.moment_id) {
+      // The AI narrator line takes the place of the template analysis line for the same moment.
+      const i = lines.value.findIndex(
+        (l) => l.source === 'template' && l.speaker === 'pundit' && l.moment_id === line.moment_id && l.lang === line.lang,
+      )
+      if (i >= 0) lines.value.splice(i, 1)
+    }
     lines.value.push(line)
     if (lines.value.length > MAX_LINES) lines.value.splice(0, lines.value.length - MAX_LINES)
     for (const fn of listeners) fn(line)
+  }
+
+  function applyCrew(raw: CrewStatus | { agent: 'crew'; status: 'disabled'; reason: string }) {
+    if (raw.agent === 'crew') {
+      crewDisabled.value = raw.reason
+      return
+    }
+    const i = crew.value.findIndex((c) => c.agent === raw.agent && c.moment_id === raw.moment_id)
+    if (i >= 0) crew.value[i] = raw
+    else crew.value.push(raw)
+    if (crew.value.length > MAX_CREW) crew.value.splice(0, crew.value.length - MAX_CREW)
   }
 
   function applyEvent(ev: MatchEvent) {
@@ -116,6 +138,8 @@ export const useMatch = defineStore('match', () => {
     stats.value = null
     momentumHistory.value = []
     recap.value = null
+    crew.value = []
+    crewDisabled.value = ''
     carrierId.value = null
     possession.value = null
     ball.value = { x: 52.5, y: 34 }
@@ -144,6 +168,7 @@ export const useMatch = defineStore('match', () => {
     es.addEventListener('pbp', (e) => pushLine(parse<CommentaryLine>(e as MessageEvent)))
     es.addEventListener('commentary', (e) => pushLine(parse<CommentaryLine>(e as MessageEvent)))
     es.addEventListener('moment', (e) => moments.value.push(parse<Moment>(e as MessageEvent)))
+    es.addEventListener('crew_status', (e) => applyCrew(parse<Parameters<typeof applyCrew>[0]>(e as MessageEvent)))
     es.addEventListener('stats', (e) => {
       const s = parse<StatsSnapshot>(e as MessageEvent)
       stats.value = s
@@ -167,7 +192,7 @@ export const useMatch = defineStore('match', () => {
   }
 
   return {
-    status, options, meta, events, last, lines, moments, stats, momentumHistory, recap, lineups,
+    status, options, meta, events, last, lines, moments, stats, momentumHistory, recap, crew, crewDisabled, lineups,
     ball, carrierId, possession, period, elapsed, clock, score,
     start, stop, reset, onLine, pushLine,
   }

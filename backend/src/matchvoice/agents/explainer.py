@@ -23,8 +23,11 @@ Rules:
 5. `key_numbers`: 1-3 short strings copied from `facts`, like "xG 0.18" or "66.6 km/h".
 6. `confidence`: 0 to 1. Lower it when `facts` is thin.
 7. Fictional clubs and players only. Write in English.
-8. If `previous_attempt_errors` is present, your last answer broke the rules: fix exactly those problems.
-9. Reply with the JSON object only.
+8. Name each metric exactly as its key in `facts` says. A "threat share" is not possession, and a
+   "momentum" value is not a percentage of the ball. If you are unsure what a number measures, leave it out.
+9. Do not claim tactics (high pressing, a flank, build-up) unless `facts` or `type` states them.
+10. If `previous_attempt_errors` is present, your last answer broke the rules: fix exactly those problems.
+11. Reply with the JSON object only.
 """
 
 
