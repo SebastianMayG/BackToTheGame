@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { TeamStats } from '@/api/types'
+import AppPanel from '@/components/AppPanel.vue'
 import { useMatch } from '@/stores/match'
 import { useProfile } from '@/stores/profile'
 
@@ -49,93 +50,41 @@ const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1))
 </script>
 
 <template>
-  <section v-if="match.stats && match.meta" class="panel">
-    <h2>{{ t('stats.title') }}</h2>
-    <table class="stats">
-      <tbody>
-        <tr v-for="r in rows" :key="r.key">
-          <td class="v">{{ fmt(r.h) }}</td>
-          <td class="bar">
-            <div class="label">{{ t(`stats.${r.key}`) }}</div>
-            <div class="track">
-              <div class="h" :style="{ width: `${r.share}%`, background: match.meta.home.primary_color }" />
-              <div class="a" :style="{ background: match.meta.away.primary_color }" />
-            </div>
-          </td>
-          <td class="v">{{ fmt(r.a) }}</td>
-        </tr>
-      </tbody>
-    </table>
+  <AppPanel v-if="match.stats && match.meta" :title="t('stats.title')" icon="pi-chart-line">
+    <div class="grid gap-1.5 tabular-nums">
+      <div v-for="r in rows" :key="r.key" class="grid grid-cols-[2.75rem_1fr_2.75rem] items-center">
+        <span class="text-center font-bold">{{ fmt(r.h) }}</span>
+        <div>
+          <div class="text-center text-xs text-muted">{{ t(`stats.${r.key}`) }}</div>
+          <div class="flex h-1.5 overflow-hidden rounded-[3px] bg-raised">
+            <div
+              class="transition-[width] duration-500 ease-out"
+              :style="{ width: `${r.share}%`, background: match.meta.home.primary_color }"
+            />
+            <div class="flex-1" :style="{ background: match.meta.away.primary_color }" />
+          </div>
+        </div>
+        <span class="text-center font-bold">{{ fmt(r.a) }}</span>
+      </div>
+    </div>
+
     <template v-if="match.stats.top_players.length">
-      <h2 class="top">{{ t('stats.topPlayers') }}</h2>
-      <ol class="players">
-        <li v-for="p in match.stats.top_players" :key="p.player.id" :class="{ fav: p.player.id === profile.player }">
-          <span class="rating">{{ p.rating.toFixed(1) }}</span>
-          <span class="dot" :style="{ background: p.team === 'home' ? match.meta.home.primary_color : match.meta.away.primary_color }" />
-          {{ p.player.name }} <span class="muted">#{{ p.player.number }}</span>
+      <h3 class="panel-title mt-4">{{ t('stats.topPlayers') }}</h3>
+      <ol class="m-0 grid list-none gap-1 p-0">
+        <li
+          v-for="p in match.stats.top_players"
+          :key="p.player.id"
+          class="flex items-center gap-2"
+          :class="{ 'text-lime': p.player.id === profile.player }"
+        >
+          <span class="w-8 font-extrabold tabular-nums">{{ p.rating.toFixed(1) }}</span>
+          <span
+            class="size-2.5 rounded-full"
+            :style="{ background: p.team === 'home' ? match.meta.home.primary_color : match.meta.away.primary_color }"
+          />
+          {{ p.player.name }} <span class="text-muted">#{{ p.player.number }}</span>
         </li>
       </ol>
     </template>
-  </section>
+  </AppPanel>
 </template>
-
-<style scoped>
-.stats {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-td {
-  padding: 3px 0;
-}
-.v {
-  width: 44px;
-  text-align: center;
-  font-weight: 700;
-}
-.label {
-  text-align: center;
-  font-size: 0.72rem;
-  color: var(--muted);
-}
-.track {
-  display: flex;
-  height: 6px;
-  border-radius: 3px;
-  overflow: hidden;
-  background: var(--panel-2);
-}
-.track .h {
-  transition: width 0.6s ease;
-}
-.track .a {
-  flex: 1;
-}
-.top {
-  margin-top: 14px;
-}
-.players {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 4px;
-}
-.players li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.players li.fav {
-  color: var(--accent-2);
-}
-.rating {
-  font-weight: 800;
-  width: 32px;
-}
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-</style>

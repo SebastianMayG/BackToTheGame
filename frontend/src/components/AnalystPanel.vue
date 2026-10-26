@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Button from 'primevue/button'
+import Chip from 'primevue/chip'
+import InputGroup from 'primevue/inputgroup'
+import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
+import ProgressBar from 'primevue/progressbar'
+import Select from 'primevue/select'
+import SelectButton from 'primevue/selectbutton'
 import { AgentError, exportUrl, queryMatch } from '@/api/client'
+import AppPanel from '@/components/AppPanel.vue'
 import { playerStats, type LivePlayerStats } from '@/lib/playerStats'
 import { useMatch } from '@/stores/match'
 import { useProfile } from '@/stores/profile'
@@ -13,6 +22,7 @@ const profile = useProfile()
 const view = useView()
 
 const LAYERS: Layer[] = ['none', 'shot_map', 'heatmap', 'progressive']
+const layerOptions = computed(() => LAYERS.map((l) => ({ value: l, label: t(l === 'none' ? 'analyst.none' : `analyst.${l}`) })))
 
 const request = ref('')
 const querying = ref(false)
@@ -39,19 +49,21 @@ async function runQuery() {
   }
 }
 
-const players = computed(() => {
+const label = (p: { number: number; name: string; club: string }) => `#${p.number} ${p.name} (${p.club})`
+const allPlayers = computed(() => {
   const m = match.meta
   if (!m) return []
   return [
     ...m.home.squad.map((p) => ({ ...p, side: 'home' as const, club: m.home.short_name })),
     ...m.away.squad.map((p) => ({ ...p, side: 'away' as const, club: m.away.short_name })),
-  ].filter((p) => view.layerTeam === 'both' || p.side === view.layerTeam)
+  ].map((p) => ({ ...p, label: label(p) }))
 })
-const allPlayers = computed(() => {
-  const m = match.meta
-  if (!m) return []
-  return [...m.home.squad.map((p) => ({ ...p, club: m.home.short_name })), ...m.away.squad.map((p) => ({ ...p, club: m.away.short_name }))]
-})
+const players = computed(() => allPlayers.value.filter((p) => view.layerTeam === 'both' || p.side === view.layerTeam))
+const teamOptions = computed(() => [
+  { value: 'both', label: t('analyst.both') },
+  { value: 'home', label: match.meta?.home.short_name ?? '' },
+  { value: 'away', label: match.meta?.away.short_name ?? '' },
+])
 
 const ROWS: { k: keyof LivePlayerStats; label: string }[] = [
   { k: 'touches', label: 'fav.touches' },
@@ -68,188 +80,120 @@ const compare = computed(() => {
   const b = playerStats(match.events, view.compareB)
   return ROWS.map((r) => ({ ...r, a: a[r.k], b: b[r.k] }))
 })
+const fmt = (v: number | string) => (typeof v === 'number' ? +v.toFixed(2) : v)
 </script>
 
 <template>
-  <section class="panel analyst">
-    <h2>📊 {{ t('analyst.title') }}</h2>
-
-    <form class="query" @submit.prevent="runQuery">
-      <div class="qrow">
-        <input
-          v-model="request"
-          type="text"
-          maxlength="300"
-          :placeholder="t('analyst.query')"
-          :aria-label="t('analyst.query')"
-          :disabled="!match.events.length || querying"
+  <AppPanel :title="t('analyst.title')" icon="pi-chart-bar">
+    <div class="grid gap-3">
+      <form class="grid gap-1.5" @submit.prevent="runQuery">
+        <InputGroup>
+          <InputText
+            v-model="request"
+            maxlength="300"
+            :placeholder="t('analyst.query')"
+            :aria-label="t('analyst.query')"
+            :disabled="!match.events.length || querying"
+            fluid
+          />
+          <Button
+            type="submit"
+            icon="pi pi-sparkles"
+            :aria-label="t('analyst.run')"
+            :loading="querying"
+            :disabled="!match.events.length || querying || request.trim().length < 2"
+          />
+        </InputGroup>
+        <div v-if="querying" role="status" class="grid gap-1">
+          <ProgressBar mode="indeterminate" class="!h-1" />
+          <small class="text-muted">{{ t('analyst.querying') }}</small>
+        </div>
+        <Message v-else-if="queryError" severity="warn" size="small" :closable="false">{{ queryError }}</Message>
+        <Chip
+          v-else-if="view.overlay"
+          :label="`${view.overlay.title} · ${view.overlay.count} ${t('analyst.events')}`"
+          icon="pi pi-sparkles"
+          removable
+          class="!max-w-full !bg-raised"
+          @remove="view.clearOverlay()"
         />
-        <button type="submit" :disabled="!match.events.length || querying || request.trim().length < 2">
-          {{ querying ? '…' : '▶' }}
-        </button>
-      </div>
-      <small v-if="querying" class="muted" role="status">{{ t('analyst.querying') }}</small>
-      <small v-else-if="queryError" class="error" role="alert">{{ queryError }}</small>
-      <div v-else-if="view.overlay" class="applied">
-        <span>
-          🤖 <strong>{{ view.overlay.title }}</strong> · {{ view.overlay.count }} {{ t('analyst.events') }}
-        </span>
-        <button type="button" :aria-label="t('analyst.clear')" @click="view.clearOverlay()">✕</button>
-      </div>
-    </form>
+      </form>
 
-    <fieldset>
-      <legend>{{ t('analyst.layers') }}</legend>
-      <div class="chips">
-        <button
-          v-for="l in LAYERS"
-          :key="l"
-          :class="{ active: view.layer === l }"
-          :aria-pressed="view.layer === l"
-          @click="view.setLayer(l)"
-        >
-          {{ t(l === 'none' ? 'analyst.none' : `analyst.${l}`) }}
-        </button>
-      </div>
-      <div class="filters">
-        <label>
-          {{ t('analyst.team') }}
-          <select v-model="view.layerTeam">
-            <option value="both">{{ t('analyst.both') }}</option>
-            <option value="home">{{ match.meta?.home.short_name }}</option>
-            <option value="away">{{ match.meta?.away.short_name }}</option>
-          </select>
-        </label>
-        <label>
-          {{ t('analyst.player') }}
-          <select v-model="view.layerPlayer">
-            <option :value="null">{{ t('analyst.allPlayers') }}</option>
-            <option v-for="p in players" :key="p.id" :value="p.id">#{{ p.number }} {{ p.name }} ({{ p.club }})</option>
-          </select>
-        </label>
-      </div>
-    </fieldset>
+      <fieldset class="m-0 grid gap-2 rounded-xl border border-line px-2.5 pb-2.5 pt-1">
+        <legend class="px-1 text-xs text-muted">{{ t('analyst.layers') }}</legend>
+        <SelectButton
+          :model-value="view.layer"
+          :options="layerOptions"
+          option-label="label"
+          option-value="value"
+          :allow-empty="false"
+          size="small"
+          :aria-label="t('analyst.layers')"
+          @update:model-value="(l: Layer) => view.setLayer(l)"
+        />
+        <div class="grid gap-2 sm:grid-cols-2">
+          <label class="grid gap-0.5 text-xs text-muted">
+            {{ t('analyst.team') }}
+            <Select v-model="view.layerTeam" :options="teamOptions" option-label="label" option-value="value" fluid />
+          </label>
+          <label class="grid gap-0.5 text-xs text-muted">
+            {{ t('analyst.player') }}
+            <Select
+              v-model="view.layerPlayer"
+              :options="players"
+              option-label="label"
+              option-value="id"
+              :placeholder="t('analyst.allPlayers')"
+              show-clear
+              filter
+              fluid
+            />
+          </label>
+        </div>
+      </fieldset>
 
-    <fieldset>
-      <legend>{{ t('analyst.compare') }}</legend>
-      <div class="filters">
-        <select v-model="view.compareA" :aria-label="`${t('analyst.player')} A`">
-          <option :value="null">—</option>
-          <option v-for="p in allPlayers" :key="p.id" :value="p.id">#{{ p.number }} {{ p.name }} ({{ p.club }})</option>
-        </select>
-        <select v-model="view.compareB" :aria-label="`${t('analyst.player')} B`">
-          <option :value="null">—</option>
-          <option v-for="p in allPlayers" :key="p.id" :value="p.id">#{{ p.number }} {{ p.name }} ({{ p.club }})</option>
-        </select>
-      </div>
-      <table v-if="view.compareA || view.compareB" class="cmp">
-        <tbody>
-          <tr v-for="r in compare" :key="r.k">
-            <td :class="{ win: r.a > r.b }">{{ typeof r.a === 'number' ? +r.a.toFixed(2) : r.a }}</td>
-            <th>{{ t(r.label) }}</th>
-            <td :class="{ win: r.b > r.a }">{{ typeof r.b === 'number' ? +r.b.toFixed(2) : r.b }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </fieldset>
+      <fieldset class="m-0 grid gap-2 rounded-xl border border-line px-2.5 pb-2.5 pt-1">
+        <legend class="px-1 text-xs text-muted">{{ t('analyst.compare') }}</legend>
+        <div class="grid gap-2 sm:grid-cols-2">
+          <Select
+            v-model="view.compareA"
+            :options="allPlayers"
+            option-label="label"
+            option-value="id"
+            :placeholder="`${t('analyst.player')} A`"
+            :aria-label="`${t('analyst.player')} A`"
+            show-clear
+            filter
+            fluid
+          />
+          <Select
+            v-model="view.compareB"
+            :options="allPlayers"
+            option-label="label"
+            option-value="id"
+            :placeholder="`${t('analyst.player')} B`"
+            :aria-label="`${t('analyst.player')} B`"
+            show-clear
+            filter
+            fluid
+          />
+        </div>
+        <table v-if="view.compareA || view.compareB" class="w-full border-collapse tabular-nums">
+          <tbody>
+            <tr v-for="r in compare" :key="r.k">
+              <td class="w-[30%] text-center font-bold" :class="{ 'text-lime': r.a > r.b }">{{ fmt(r.a) }}</td>
+              <th class="text-xs font-normal text-muted">{{ t(r.label) }}</th>
+              <td class="w-[30%] text-center font-bold" :class="{ 'text-lime': r.b > r.a }">{{ fmt(r.b) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </fieldset>
 
-    <div v-if="match.options" class="export">
-      <span class="muted">{{ t('analyst.export') }}:</span>
-      <a :href="exportUrl(match.options, 'csv')" download>CSV</a>
-      <a :href="exportUrl(match.options, 'json')" download>JSON</a>
+      <div v-if="match.options" class="flex flex-wrap items-center gap-1.5">
+        <span class="text-muted">{{ t('analyst.export') }}</span>
+        <Button as="a" :href="exportUrl(match.options, 'csv')" download label="CSV" icon="pi pi-download" text size="small" />
+        <Button as="a" :href="exportUrl(match.options, 'json')" download label="JSON" icon="pi pi-download" text size="small" />
+      </div>
     </div>
-  </section>
+  </AppPanel>
 </template>
-
-<style scoped>
-.analyst {
-  display: grid;
-  gap: 12px;
-}
-.query {
-  display: grid;
-  gap: 4px;
-}
-.query small {
-  font-size: 0.7rem;
-}
-.qrow {
-  display: flex;
-  gap: 6px;
-}
-.qrow input {
-  flex: 1;
-  min-width: 0;
-}
-.error {
-  color: var(--danger);
-}
-.applied {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-}
-fieldset {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 8px 10px 10px;
-  margin: 0;
-}
-legend {
-  font-size: 0.75rem;
-  color: var(--muted);
-  padding: 0 4px;
-}
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.chips button {
-  font-size: 0.8rem;
-}
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-}
-.filters label {
-  display: grid;
-  gap: 2px;
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-.filters select {
-  max-width: 100%;
-}
-.cmp {
-  width: 100%;
-  margin-top: 8px;
-  font-variant-numeric: tabular-nums;
-  border-collapse: collapse;
-}
-.cmp th {
-  font-weight: 400;
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-.cmp td {
-  width: 30%;
-  text-align: center;
-  font-weight: 700;
-}
-.cmp td.win {
-  color: var(--accent-2);
-}
-.export {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-.export a {
-  color: var(--accent);
-}
-</style>

@@ -75,7 +75,10 @@ export const useMatch = defineStore('match', () => {
       )
       if (i >= 0) lines.value.splice(i, 1)
     }
-    lines.value.push(line)
+    // AI lines arrive a few seconds after the play: keep the chat in match order.
+    let at = lines.value.length
+    while (at > 0 && lines.value[at - 1].elapsed > line.elapsed) at--
+    lines.value.splice(at, 0, line)
     if (lines.value.length > MAX_LINES) lines.value.splice(0, lines.value.length - MAX_LINES)
     for (const fn of listeners) fn(line)
   }

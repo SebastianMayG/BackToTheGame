@@ -44,7 +44,7 @@ watch(
     let t: Tag | null = null
     if (ev.type === 'carry' && d.sprint && d.top_speed_kmh >= 30) {
       const p = toView.value(d.end_location)
-      t = { ...p, text: `⚡ ${d.top_speed_kmh.toFixed(1)} km/h`, kind: 'speed' }
+      t = { ...p, text: `${d.top_speed_kmh.toFixed(1)} km/h`, kind: 'speed' }
     } else if (ev.type === 'shot') {
       const p = toView.value(ev.location)
       t = { ...p, text: `${d.speed_kmh.toFixed(0)} km/h · xG ${d.xg.toFixed(2)}`, kind: 'shot' }

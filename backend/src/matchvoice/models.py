@@ -232,6 +232,7 @@ class CommentaryLine(BaseModel):
     text: str
     emotion: Literal["neutral", "excited", "tense", "disappointed"] = "neutral"
     source: Literal["template", "ai"] = "template"
+    favourite: bool = False  # the line is about the viewer's favourite player
 
 
 class Recap(BaseModel):

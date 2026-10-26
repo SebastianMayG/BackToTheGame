@@ -13,52 +13,37 @@ const total = computed(() => {
 })
 const pct = (e: number) => `${Math.min(100, (e / total.value) * 100)}%`
 const marks = computed(() => match.moments.filter((m) => MARKS.has(m.type)))
-const icon = (type: string) => ({ goal: '⚽', red_card: '🟥', penalty_awarded: '⚠️' })[type] ?? '•'
+const label = (m: (typeof marks.value)[number]) => `${m.clock} ${m.headline?.[profile.lang] ?? ''}`
+const teamColor = (side?: string | null) =>
+  side === 'home' ? match.meta?.home.primary_color : side === 'away' ? match.meta?.away.primary_color : '#fff'
 </script>
 
 <template>
-  <div class="timeline" role="progressbar" :aria-valuenow="Math.round(match.elapsed / 60)" aria-valuemin="0" :aria-valuemax="Math.round(total / 60)">
-    <div class="played" :style="{ width: pct(match.elapsed) }" />
-    <div class="half" :style="{ left: pct(45 * 60) }" />
+  <div
+    class="relative mx-1 mb-1.5 mt-4 h-2 rounded bg-raised"
+    role="progressbar"
+    :aria-valuenow="Math.round(match.elapsed / 60)"
+    aria-valuemin="0"
+    :aria-valuemax="Math.round(total / 60)"
+  >
+    <div class="absolute inset-y-0 left-0 rounded bg-primary transition-[width] duration-500 ease-linear" :style="{ width: pct(match.elapsed) }" />
+    <div class="absolute -inset-y-[3px] w-0.5 bg-muted" :style="{ left: pct(45 * 60) }" />
     <span
       v-for="m in marks"
       :key="m.id"
-      class="mark"
-      :class="m.team ?? ''"
+      v-tooltip.top="label(m)"
+      class="absolute -top-4 grid -translate-x-1/2 place-items-center"
       :style="{ left: pct(m.elapsed) }"
-      :title="`${m.clock} ${m.headline?.[profile.lang] ?? ''}`"
+      :aria-label="label(m)"
     >
-      {{ icon(m.type) }}
+      <!-- goal: team-coloured disc; red card: red card shape; penalty: warning triangle -->
+      <span
+        v-if="m.type === 'goal'"
+        class="size-3 rounded-full border-2 border-white"
+        :style="{ background: teamColor(m.team) }"
+      />
+      <span v-else-if="m.type === 'red_card'" class="h-3.5 w-2.5 rounded-[2px] bg-danger" />
+      <i v-else class="pi pi-exclamation-triangle text-xs text-warn" aria-hidden="true" />
     </span>
   </div>
 </template>
-
-<style scoped>
-.timeline {
-  position: relative;
-  height: 8px;
-  background: var(--panel-2);
-  border-radius: 4px;
-  margin: 14px 4px 6px;
-}
-.played {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background: var(--accent);
-  border-radius: 4px;
-  transition: width 0.5s linear;
-}
-.half {
-  position: absolute;
-  top: -3px;
-  bottom: -3px;
-  width: 2px;
-  background: var(--muted);
-}
-.mark {
-  position: absolute;
-  top: -14px;
-  transform: translateX(-50%);
-  font-size: 0.8rem;
-}
-</style>

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Button from 'primevue/button'
+import SelectButton from 'primevue/selectbutton'
+import ToggleButton from 'primevue/togglebutton'
 import type { Lang, Mode } from '@/api/types'
 import { useVoice } from '@/composables/useVoice'
 import { useMatch } from '@/stores/match'
@@ -8,11 +11,11 @@ import { useProfile } from '@/stores/profile'
 import { useView, type Layer } from '@/stores/view'
 import AnalystPanel from '@/components/AnalystPanel.vue'
 import CommentaryChat from '@/components/chat/CommentaryChat.vue'
+import CrewPanel from '@/components/CrewPanel.vue'
 import FavoritePlayerCard from '@/components/FavoritePlayerCard.vue'
 import MomentumChart from '@/components/MomentumChart.vue'
 import PitchView from '@/components/pitch/PitchView.vue'
 import RecapModal from '@/components/RecapModal.vue'
-import CrewPanel from '@/components/CrewPanel.vue'
 import ScoreBar from '@/components/ScoreBar.vue'
 import SetupScreen from '@/components/SetupScreen.vue'
 import StatsPanel from '@/components/StatsPanel.vue'
@@ -49,6 +52,7 @@ function newMatch() {
   voice.cancel()
   match.reset()
   view.clearOverlay()
+  profile.newSeed() // every match is a different one
   match.status = 'idle'
 }
 
@@ -78,8 +82,13 @@ watch(
 )
 
 const MODES: Mode[] = ['fan', 'analyst', 'accessible']
+const modeOptions = computed(() => MODES.map((m) => ({ value: m, label: t(`mode.${m}`) })))
+const langOptions = [
+  { value: 'en', label: 'EN' },
+  { value: 'es', label: 'ES' },
+]
 
-// Shareable demo links, e.g. /?mode=analyst&club=NVR&player=NVR-9&lang=en&autostart=1
+// Shareable demo links, e.g. /?mode=analyst&club=NVR&player=NVR-9&lang=en&seed=42&autostart=1
 onMounted(() => {
   const q = new URLSearchParams(window.location.search)
   const str = (k: string) => q.get(k) || null
@@ -91,7 +100,7 @@ onMounted(() => {
   if (MODES.includes(q.get('mode') as Mode)) profile.mode = q.get('mode') as Mode
   if (q.has('club')) profile.club = str('club')
   if (q.has('player')) profile.player = str('player')
-  if (q.has('ai')) profile.ai = q.get('ai') !== '0'
+  if (q.has('ai')) profile.ai = !['0', 'false', 'off'].includes(q.get('ai') ?? '')
   const layer = q.get('layer') as Layer | null
   if (layer && ['none', 'shot_map', 'heatmap', 'progressive'].includes(layer)) view.layer = layer
   if (q.has('autostart')) start()
@@ -101,33 +110,56 @@ onMounted(() => {
 <template>
   <SetupScreen v-if="!inMatch" @start="start" />
 
-  <div v-else class="studio">
-    <div class="left">
+  <div
+    v-else
+    class="mx-auto grid min-h-screen max-w-[1600px] grid-cols-1 gap-3.5 p-3.5 max-lg:p-2.5 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]"
+  >
+    <div class="flex min-w-0 flex-col gap-2.5">
       <ScoreBar />
       <PitchView />
       <Timeline />
-      <div class="controls" role="toolbar">
-        <div class="seg" role="group" :aria-label="t('setup.mode')">
-          <button v-for="m in MODES" :key="m" :class="{ active: profile.mode === m }" :aria-pressed="profile.mode === m" @click="profile.mode = m">
-            {{ t(`mode.${m}`) }}
-          </button>
-        </div>
-        <div class="seg" role="group" :aria-label="t('setup.lang')">
-          <button v-for="l in ['es', 'en'] as Lang[]" :key="l" :class="{ active: profile.lang === l }" :aria-pressed="profile.lang === l" @click="profile.lang = l">
-            {{ l.toUpperCase() }}
-          </button>
-        </div>
-        <button :class="{ active: profile.voice }" :aria-pressed="profile.voice" :disabled="!voice.supported" @click="profile.voice = !profile.voice">
-          {{ profile.voice ? '🔊' : '🔇' }} {{ t('controls.voice') }}
-        </button>
-        <button :class="{ active: profile.names }" :aria-pressed="profile.names" @click="profile.names = !profile.names">
-          🏷️ {{ t('controls.names') }}
-        </button>
-        <span class="spacer" />
-        <button @click="newMatch">↺ {{ t('controls.restart') }}</button>
+
+      <div class="flex flex-wrap items-center gap-2" role="toolbar">
+        <SelectButton
+          v-model="profile.mode"
+          :options="modeOptions"
+          option-label="label"
+          option-value="value"
+          :allow-empty="false"
+          size="small"
+          :aria-label="t('setup.mode')"
+        />
+        <SelectButton
+          v-model="profile.lang"
+          :options="langOptions"
+          option-label="label"
+          option-value="value"
+          :allow-empty="false"
+          size="small"
+          :aria-label="t('setup.lang')"
+        />
+        <ToggleButton
+          v-model="profile.voice"
+          on-icon="pi pi-volume-up"
+          off-icon="pi pi-volume-off"
+          :on-label="t('controls.voice')"
+          :off-label="t('controls.voice')"
+          :disabled="!voice.supported"
+          size="small"
+        />
+        <ToggleButton
+          v-model="profile.names"
+          on-icon="pi pi-tag"
+          off-icon="pi pi-tag"
+          :on-label="t('controls.names')"
+          :off-label="t('controls.names')"
+          size="small"
+        />
+        <span class="flex-1" />
+        <Button icon="pi pi-refresh" :label="t('controls.restart')" severity="secondary" outlined size="small" @click="newMatch" />
       </div>
 
-      <div class="panels">
+      <div class="grid items-start gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(300px,1fr))]">
         <FavoritePlayerCard v-if="profile.player" />
         <CrewPanel v-if="profile.ai" />
         <AnalystPanel v-if="profile.mode === 'analyst'" />
@@ -136,71 +168,10 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="right">
+    <div class="min-h-0 max-lg:h-[70vh] lg:sticky lg:top-3.5 lg:h-[calc(100vh-1.75rem)]">
       <CommentaryChat />
     </div>
 
     <RecapModal />
   </div>
 </template>
-
-<style scoped>
-.studio {
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
-  gap: 14px;
-  padding: 14px;
-  max-width: 1600px;
-  margin: 0 auto;
-  min-height: 100vh;
-}
-.left {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-}
-.right {
-  position: sticky;
-  top: 14px;
-  height: calc(100vh - 28px);
-  min-height: 0;
-}
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-.seg {
-  display: flex;
-}
-.seg button {
-  border-radius: 0;
-}
-.seg button:first-child {
-  border-radius: 8px 0 0 8px;
-}
-.seg button:last-child {
-  border-radius: 0 8px 8px 0;
-}
-.spacer {
-  flex: 1;
-}
-.panels {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 10px;
-  align-items: start;
-}
-@media (max-width: 900px) {
-  .studio {
-    grid-template-columns: 1fr;
-    padding: 10px;
-  }
-  .right {
-    position: static;
-    height: 70vh;
-  }
-}
-</style>

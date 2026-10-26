@@ -1,37 +1,32 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
-import type { Lang, Level, Mode } from '@/api/types'
+import type { Intensity, Lang, Mode } from '@/api/types'
 
-const KEY = 'matchvoice.profile'
+// v2: English is the default language, and the match and the narration level are no longer remembered.
+const KEY = 'matchvoice.profile.v2'
 
 interface SavedProfile {
   lang: Lang
   mode: Mode
   club: string | null
   player: string | null
-  intensity: Level
   voice: boolean
   names: boolean
   speed: number
-  seed: number
   home: string
   away: string
-  ai: boolean
 }
 
 const defaults: SavedProfile = {
-  lang: 'es',
+  lang: 'en',
   mode: 'fan',
   club: null,
   player: null,
-  intensity: 2,
   voice: true,
   names: false,
   speed: 30,
-  seed: 42,
   home: 'NVR',
   away: 'KBY',
-  ai: false, // the AI crew costs model calls, so it is opt-in
 }
 
 function load(): SavedProfile {
@@ -43,6 +38,9 @@ function load(): SavedProfile {
   }
 }
 
+/** A different match on every visit. Fixed with `?seed=` in the URL when a demo needs the same one. */
+export const randomSeed = () => Math.floor(Math.random() * 100000)
+
 /** Viewer personalisation, remembered in this browser only. */
 export const useProfile = defineStore('profile', () => {
   const saved = load()
@@ -50,25 +48,26 @@ export const useProfile = defineStore('profile', () => {
   const mode = ref<Mode>(saved.mode)
   const club = ref<string | null>(saved.club)
   const player = ref<string | null>(saved.player)
-  const intensity = ref<Level>(saved.intensity)
   const voice = ref(saved.voice)
   const names = ref(saved.names)
   const speed = ref(saved.speed)
-  const seed = ref(saved.seed)
   const home = ref(saved.home)
   const away = ref(saved.away)
-  const ai = ref(saved.ai)
+  // Not saved: each visit starts on the big moments, with a new match and the AI crew on.
+  const intensity = ref<Intensity>(1)
+  const seed = ref(randomSeed())
+  // `?ai=0` in the URL turns the AI crew off for that visit (testing, no spend).
+  const ai = ref(true)
 
   watch(
-    [lang, mode, club, player, intensity, voice, names, speed, seed, home, away, ai],
+    [lang, mode, club, player, voice, names, speed, home, away],
     () => {
       try {
         localStorage.setItem(
           KEY,
           JSON.stringify({
             lang: lang.value, mode: mode.value, club: club.value, player: player.value,
-            intensity: intensity.value, voice: voice.value, names: names.value, speed: speed.value,
-            seed: seed.value, home: home.value, away: away.value, ai: ai.value,
+            voice: voice.value, names: names.value, speed: speed.value, home: home.value, away: away.value,
           } satisfies SavedProfile),
         )
       } catch {
@@ -77,5 +76,9 @@ export const useProfile = defineStore('profile', () => {
     },
   )
 
-  return { lang, mode, club, player, intensity, voice, names, speed, seed, home, away, ai }
+  function newSeed() {
+    seed.value = randomSeed()
+  }
+
+  return { lang, mode, club, player, intensity, voice, names, speed, seed, home, away, ai, newSeed }
 })

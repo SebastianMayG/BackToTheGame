@@ -25,3 +25,5 @@ export type Side = 'home' | 'away'
 export type Lang = 'es' | 'en'
 export type Mode = 'fan' | 'analyst' | 'accessible'
 export type Level = 1 | 2 | 3
+/** What the viewer wants narrated: 1 = big moments only, 2 = key plays too. Level 3 lines are never shown. */
+export type Intensity = 1 | 2

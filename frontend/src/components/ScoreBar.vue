@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Tag from 'primevue/tag'
 import { useMatch } from '@/stores/match'
 import { useView } from '@/stores/view'
 
@@ -11,138 +12,69 @@ const view = useView()
 const momentum = computed(() => match.stats?.momentum ?? 0) // -1 away .. +1 home
 const rhythm = computed(() => match.stats?.rhythm ?? 'balanced')
 // The meter fills from the centre toward whoever is on top.
-const meter = computed(() => ({ left: `${50 - Math.max(0, momentum.value) * 50}%`, right: `${50 + Math.min(0, momentum.value) * 50}%` }))
+const meter = computed(() => ({
+  left: `${50 - Math.max(0, momentum.value) * 50}%`,
+  right: `${50 + Math.min(0, momentum.value) * 50}%`,
+}))
+const statusSeverity = computed(() =>
+  ({ live: 'danger', ended: 'secondary', error: 'warn', connecting: 'info', idle: 'secondary' })[match.status] as
+    | 'danger'
+    | 'secondary'
+    | 'warn'
+    | 'info',
+)
+const RHYTHM_CLASS: Record<string, string> = { chaos: 'text-warn', control: 'text-primary' }
+const rhythmClass = computed(() => RHYTHM_CLASS[rhythm.value] ?? 'text-muted')
 </script>
 
 <template>
-  <header v-if="match.meta" class="score panel">
-    <div class="team home" :class="{ fav: view.favSide === 'home' }">
-      <span class="badge" :style="{ background: match.meta.home.primary_color, borderColor: match.meta.home.secondary_color }" />
-      <span class="name">{{ match.meta.home.name }}</span>
+  <header
+    v-if="match.meta"
+    class="relative grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-xl border border-line bg-panel px-3.5 pb-4 pt-2.5"
+  >
+    <div class="flex min-w-0 items-center gap-2.5 font-bold">
+      <span
+        class="size-[18px] flex-none rounded-full border-[3px]"
+        :style="{ background: match.meta.home.primary_color, borderColor: match.meta.home.secondary_color }"
+      />
+      <span class="truncate max-sm:text-sm">{{ match.meta.home.name }}</span>
+      <i v-if="view.favSide === 'home'" class="pi pi-star-fill text-lime" :aria-label="t('fav.title')" />
     </div>
-    <div class="center">
-      <div class="result" aria-live="polite">
-        <span>{{ match.score.home }}</span><span class="sep">-</span><span>{{ match.score.away }}</span>
+
+    <div class="text-center">
+      <div class="text-3xl font-extrabold leading-none tabular-nums max-sm:text-2xl" aria-live="polite">
+        <span>{{ match.score.home }}</span><span class="mx-2 text-muted">-</span><span>{{ match.score.away }}</span>
       </div>
-      <div class="clock">
-        <span class="status" :class="match.status">{{ t(`status.${match.status}`) }}</span>
+      <div class="mt-1 flex items-center justify-center gap-1.5 text-sm text-muted tabular-nums">
+        <Tag :value="t(`status.${match.status}`)" :severity="statusSeverity" class="!px-1.5 !py-0 !text-[0.65rem]" />
         {{ match.clock }}
       </div>
     </div>
-    <div class="team away" :class="{ fav: view.favSide === 'away' }">
-      <span class="name">{{ match.meta.away.name }}</span>
-      <span class="badge" :style="{ background: match.meta.away.primary_color, borderColor: match.meta.away.secondary_color }" />
+
+    <div class="flex min-w-0 items-center justify-end gap-2.5 font-bold">
+      <i v-if="view.favSide === 'away'" class="pi pi-star-fill text-lime" :aria-label="t('fav.title')" />
+      <span class="truncate max-sm:text-sm">{{ match.meta.away.name }}</span>
+      <span
+        class="size-[18px] flex-none rounded-full border-[3px]"
+        :style="{ background: match.meta.away.primary_color, borderColor: match.meta.away.secondary_color }"
+      />
     </div>
-    <div class="meter" :title="`${t('momentum.title')}: ${momentum}`">
-      <div class="fill home" :style="{ left: meter.left, right: '50%', background: match.meta.home.primary_color }" />
-      <div class="fill away" :style="{ left: '50%', right: meter.right, background: match.meta.away.primary_color }" />
-      <span class="rhythm" :class="rhythm">{{ t(`momentum.${rhythm}`) }}</span>
+
+    <div
+      class="absolute inset-x-3.5 bottom-1.5 h-1 rounded-sm bg-raised"
+      :title="`${t('momentum.title')}: ${momentum.toFixed(2)}`"
+    >
+      <div
+        class="absolute inset-y-0 transition-all duration-700"
+        :style="{ left: meter.left, right: '50%', background: match.meta.home.primary_color }"
+      />
+      <div
+        class="absolute inset-y-0 transition-all duration-700"
+        :style="{ left: '50%', right: meter.right, background: match.meta.away.primary_color }"
+      />
+      <span class="absolute -top-4 right-0 text-[0.65rem] uppercase tracking-wider" :class="rhythmClass">
+        {{ t(`momentum.${rhythm}`) }}
+      </span>
     </div>
   </header>
 </template>
-
-<style scoped>
-.score {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px 16px;
-  position: relative;
-}
-.team {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  min-width: 0;
-}
-.team.away {
-  justify-content: flex-end;
-}
-.team .name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.team.fav .name::after {
-  content: ' ★';
-  color: var(--accent-2);
-}
-.badge {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 3px solid;
-  flex: none;
-}
-.center {
-  text-align: center;
-}
-.result {
-  font-size: 2rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-.sep {
-  margin: 0 8px;
-  color: var(--muted);
-}
-.clock {
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-  font-size: 0.85rem;
-  margin-top: 4px;
-}
-.status {
-  font-weight: 800;
-  font-size: 0.7rem;
-  padding: 1px 6px;
-  border-radius: 4px;
-  margin-right: 6px;
-  background: var(--panel-2);
-}
-.status.live {
-  background: var(--danger);
-  color: #fff;
-}
-.meter {
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 6px;
-  height: 4px;
-  background: var(--panel-2);
-  border-radius: 2px;
-}
-.fill {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  transition: all 0.8s ease;
-}
-.rhythm {
-  position: absolute;
-  right: 0;
-  top: -16px;
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-.rhythm.chaos {
-  color: var(--warn);
-}
-.rhythm.control {
-  color: var(--accent);
-}
-@media (max-width: 560px) {
-  .team .name {
-    font-size: 0.85rem;
-  }
-  .result {
-    font-size: 1.5rem;
-  }
-}
-</style>

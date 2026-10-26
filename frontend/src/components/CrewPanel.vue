@@ -1,13 +1,25 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Message from 'primevue/message'
+import Tag from 'primevue/tag'
 import type { CrewStatus } from '@/api/types'
+import AppPanel from '@/components/AppPanel.vue'
 import { useMatch } from '@/stores/match'
 
 const { t } = useI18n()
 const match = useMatch()
 
 const AGENTS: CrewStatus['agent'][] = ['explainer', 'commentator', 'recapper']
+type Severity = 'success' | 'warn' | 'danger' | 'secondary'
+const SEVERITY: Record<CrewStatus['status'], Severity> = {
+  ok: 'success',
+  fallback: 'warn',
+  degraded: 'warn',
+  error: 'danger',
+  disabled: 'danger',
+  skipped: 'secondary',
+}
 
 const rows = computed(() =>
   AGENTS.map((agent) => {
@@ -25,125 +37,57 @@ const rows = computed(() =>
 )
 
 const recent = computed(() => match.crew.slice(-6).reverse())
+const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`
 </script>
 
 <template>
-  <section class="crew panel" :aria-label="t('crew.title')">
-    <h2>🤖 {{ t('crew.title') }}</h2>
-    <p v-if="match.crewDisabled" class="muted">{{ t('crew.disabledWhy', { reason: match.crewDisabled }) }}</p>
+  <AppPanel :title="t('crew.title')" icon="pi-sparkles">
+    <Message v-if="match.crewDisabled" severity="info" size="small" :closable="false">{{ t('crew.disabledWhy') }}</Message>
     <template v-else>
-      <div class="agents">
-        <div v-for="r in rows" :key="r.agent" class="agent">
-          <div class="name">
-            <span class="dot" :class="r.last?.status ?? 'idle'" aria-hidden="true" />
+      <div class="grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]">
+        <div v-for="r in rows" :key="r.agent" class="rounded-lg border border-line p-2.5">
+          <div class="flex flex-wrap items-center gap-1.5">
             <strong>{{ t(`crew.${r.agent}`) }}</strong>
-            <span v-if="r.last" class="pill" :class="r.last.status">{{ t(`crew.${r.last.status}`) }}</span>
+            <Tag
+              v-if="r.last"
+              :value="t(`crew.${r.last.status}`)"
+              :severity="SEVERITY[r.last.status]"
+              class="!px-1.5 !py-0 !text-[0.65rem]"
+            />
           </div>
-          <dl>
-            <div><dt>{{ t('crew.handled') }}</dt><dd>{{ r.handled }}</dd></div>
-            <div><dt>{{ t('crew.fallbacks') }}</dt><dd>{{ r.fallbacks }}</dd></div>
-            <div><dt>{{ t('crew.avg') }}</dt><dd>{{ r.avg == null ? '–' : `${(r.avg / 1000).toFixed(1)} s` }}</dd></div>
+          <dl class="mb-0 mt-1.5 grid gap-0.5 text-sm">
+            <div class="flex justify-between">
+              <dt class="text-muted">{{ t('crew.handled') }}</dt>
+              <dd class="m-0 tabular-nums">{{ r.handled }}</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-muted">{{ t('crew.fallbacks') }}</dt>
+              <dd class="m-0 tabular-nums">{{ r.fallbacks }}</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-muted">{{ t('crew.avg') }}</dt>
+              <dd class="m-0 tabular-nums">{{ r.avg == null ? '–' : seconds(r.avg) }}</dd>
+            </div>
           </dl>
         </div>
       </div>
-      <p v-if="!match.crew.length" class="muted">{{ t('crew.waiting') }}</p>
-      <ul v-else class="log">
-        <li v-for="c in recent" :key="`${c.agent}-${c.moment_id}`" :title="c.problems?.join(' · ')">
-          <span class="dot" :class="c.status" aria-hidden="true" />
-          <span class="mid">{{ c.moment_id }}</span>
+
+      <p v-if="!match.crew.length" class="m-0 text-muted">{{ t('crew.waiting') }}</p>
+      <ul v-else class="m-0 mt-2.5 grid list-none gap-1 p-0 text-sm">
+        <li
+          v-for="c in recent"
+          :key="`${c.agent}-${c.moment_id}`"
+          class="flex flex-wrap items-center gap-1.5"
+          :title="c.problems?.join(' · ')"
+        >
+          <Tag :value="t(`crew.${c.status}`)" :severity="SEVERITY[c.status]" class="!px-1.5 !py-0 !text-[0.65rem]" />
+          <span class="text-muted tabular-nums">{{ c.moment_id }}</span>
           <span>{{ t(`crew.${c.agent}`) }}</span>
-          <span class="muted">{{ t(`crew.${c.status}`) }} · {{ c.attempts }} {{ t('crew.attempts') }}<template v-if="c.latency_ms != null"> · {{ (c.latency_ms / 1000).toFixed(1) }} s</template></span>
+          <span class="text-muted">
+            {{ c.attempts }} {{ t('crew.attempts') }}<template v-if="c.latency_ms != null"> · {{ seconds(c.latency_ms) }}</template>
+          </span>
         </li>
       </ul>
     </template>
-  </section>
+  </AppPanel>
 </template>
-
-<style scoped>
-h2 {
-  margin: 0 0 8px;
-}
-.agents {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-}
-.agent {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 8px 10px;
-}
-.name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-dl {
-  margin: 6px 0 0;
-  display: grid;
-  gap: 2px;
-  font-size: 0.8rem;
-}
-dl div {
-  display: flex;
-  justify-content: space-between;
-}
-dt {
-  color: var(--muted);
-}
-dd {
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-}
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--muted);
-  flex: none;
-}
-.dot.ok {
-  background: var(--accent-2);
-}
-.dot.fallback,
-.dot.degraded {
-  background: #e0a526;
-}
-.dot.error,
-.dot.disabled {
-  background: var(--danger);
-}
-.pill {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0 6px;
-  font-size: 0.65rem;
-}
-.pill.ok {
-  border-color: var(--accent-2);
-  color: var(--accent-2);
-}
-.pill.error {
-  border-color: var(--danger);
-  color: var(--danger);
-}
-.log {
-  list-style: none;
-  margin: 10px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 3px;
-  font-size: 0.78rem;
-}
-.log li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.mid {
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-}
-</style>

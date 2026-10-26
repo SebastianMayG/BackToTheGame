@@ -339,8 +339,8 @@ def narrate_event(ev: MatchEvent, ctx: NarrationContext) -> CommentaryLine | Non
         if where:
             text = f"{text[:-1] if text.endswith('.') else text} — {where}."
             level = min(level, 2)  # accessible mode describes the build-up too
-    if ctx.fav_player and ev.player and ev.player.id == ctx.fav_player:
-        text = f"⭐ {text}"
+    favourite = bool(ctx.fav_player and ev.player and ev.player.id == ctx.fav_player)
+    if favourite:
         if t in ("shot", "tackle", "interception", "carry") and level == 3:
             level = 2  # the viewer's player gets their notable actions narrated
 
@@ -354,6 +354,7 @@ def narrate_event(ev: MatchEvent, ctx: NarrationContext) -> CommentaryLine | Non
         lang=lang,
         text=text,
         emotion=emotion,  # type: ignore[arg-type]
+        favourite=favourite,
     )
 
 
@@ -372,9 +373,9 @@ MOMENT_T: dict[Lang, dict[str, str]] = {
         "red_card": "¡Roja para {player}! {team} jugará con diez.",
         "yellow_card": "Amarilla para {player} ({team}).",
         "substitution": "Cambio en {team}: entra {player_in} por {player_out}.",
-        "speed_alert": "⚡ {player} alcanza {speed} km/h.",
-        "rocket_shot": "🚀 ¡Misil de {player}! El disparo sale a {speed} km/h.",
-        "quality_pass": "🎯 Pase de calidad de {player}: {distance} m, dificultad {difficulty}.",
+        "speed_alert": "{player} alcanza {speed} km/h.",
+        "rocket_shot": "¡Misil de {player}! El disparo sale a {speed} km/h.",
+        "quality_pass": "Pase de calidad de {player}: {distance} m, dificultad {difficulty}.",
         "half_time": "Descanso: {home} {h}-{a} {away}. xG {xg_home}-{xg_away}.",
         "full_time": "Final: {home} {h}-{a} {away}. xG {xg_home}-{xg_away}.",
     },
@@ -391,9 +392,9 @@ MOMENT_T: dict[Lang, dict[str, str]] = {
         "red_card": "Red card for {player}! {team} down to ten.",
         "yellow_card": "Yellow card for {player} ({team}).",
         "substitution": "{team} change: {player_in} on for {player_out}.",
-        "speed_alert": "⚡ {player} hits {speed} km/h.",
-        "rocket_shot": "🚀 Rocket from {player}! That shot left the boot at {speed} km/h.",
-        "quality_pass": "🎯 Quality pass from {player}: {distance} m, difficulty {difficulty}.",
+        "speed_alert": "{player} hits {speed} km/h.",
+        "rocket_shot": "Rocket from {player}! That shot left the boot at {speed} km/h.",
+        "quality_pass": "Quality pass from {player}: {distance} m, difficulty {difficulty}.",
         "half_time": "Half time: {home} {h}-{a} {away}. xG {xg_home}-{xg_away}.",
         "full_time": "Full time: {home} {h}-{a} {away}. xG {xg_home}-{xg_away}.",
     },

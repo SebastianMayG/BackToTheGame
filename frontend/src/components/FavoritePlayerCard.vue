@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Avatar from 'primevue/avatar'
+import Tag from 'primevue/tag'
+import AppPanel from '@/components/AppPanel.vue'
 import { playerStats } from '@/lib/playerStats'
 import { useMatch } from '@/stores/match'
 import { useProfile } from '@/stores/profile'
@@ -35,58 +38,32 @@ const items = computed(() => [
 </script>
 
 <template>
-  <section v-if="player" class="panel fav" :style="{ borderColor: player.club.primary_color }">
-    <h2>⭐ {{ t('fav.title') }}</h2>
-    <div class="who">
-      <span class="shirt" :style="{ background: player.club.primary_color, color: player.club.secondary_color }">{{ player.number }}</span>
+  <AppPanel
+    v-if="player"
+    :title="t('fav.title')"
+    icon="pi-star-fill"
+    :style="{ borderColor: player.club.primary_color, borderWidth: '2px' }"
+  >
+    <div class="mb-2.5 flex items-center gap-2.5">
+      <Avatar
+        :label="String(player.number)"
+        shape="square"
+        size="large"
+        :style="{ background: player.club.primary_color, color: player.club.secondary_color, fontWeight: 800 }"
+      />
       <div>
         <strong>{{ player.name }}</strong>
-        <div class="muted small">{{ player.club.name }} · {{ player.position }}<span v-if="!onPitch && match.events.length"> · 🪑</span></div>
+        <div class="flex flex-wrap items-center gap-1.5 text-sm text-muted">
+          {{ player.club.name }} · {{ player.position }}
+          <Tag v-if="!onPitch && match.events.length" :value="t('fav.bench')" severity="secondary" class="!px-1.5 !py-0 !text-[0.65rem]" />
+        </div>
       </div>
     </div>
-    <dl class="grid">
+    <dl class="m-0 grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(110px,1fr))]">
       <div v-for="i in items" :key="i.k">
-        <dt>{{ t(`fav.${i.k}`) }}</dt>
-        <dd>{{ i.v }}</dd>
+        <dt class="text-xs text-muted">{{ t(`fav.${i.k}`) }}</dt>
+        <dd class="m-0 font-bold tabular-nums">{{ i.v }}</dd>
       </div>
     </dl>
-  </section>
+  </AppPanel>
 </template>
-
-<style scoped>
-.fav {
-  border-width: 2px;
-}
-.who {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 10px;
-}
-.shirt {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-}
-.small {
-  font-size: 0.8rem;
-}
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 8px;
-  margin: 0;
-}
-dt {
-  font-size: 0.7rem;
-  color: var(--muted);
-}
-dd {
-  margin: 0;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-</style>

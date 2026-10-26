@@ -1,82 +1,56 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
+import Tag from 'primevue/tag'
 import { useMatch } from '@/stores/match'
 
 const { t } = useI18n()
 const match = useMatch()
-const closeBtn = ref<HTMLButtonElement | null>(null)
 
-watch(
-  () => match.recap,
-  async (r) => {
-    if (r) {
-      await nextTick()
-      closeBtn.value?.focus()
-    }
+// The dialog handles focus trapping, Esc and the backdrop; closing it just clears the recap.
+const visible = computed({
+  get: () => match.recap !== null,
+  set: (open: boolean) => {
+    if (!open) match.recap = null
   },
-)
-const close = () => (match.recap = null)
+})
 </script>
 
 <template>
-  <div v-if="match.recap" class="backdrop" @click.self="close" @keydown.esc="close">
-    <div class="modal panel" role="dialog" aria-modal="true" aria-labelledby="recap-title">
-      <p class="kind">
-        {{ t(`recap.${match.recap.kind}`) }}
-        <span v-if="match.recap.source === 'ai'" class="ai">{{ t('chat.ai') }}</span>
-      </p>
-      <h3 id="recap-title">{{ match.recap.headline }}</h3>
-      <p v-for="(para, i) in match.recap.text.split('\n')" :key="i">{{ para }}</p>
-      <p v-if="match.recap.player_of_the_match" class="pom">
-        🏅 {{ t('recap.pom') }}: <strong>{{ match.recap.player_of_the_match.name }}</strong>
-      </p>
-      <button ref="closeBtn" class="primary" @click="close">{{ t('recap.close') }}</button>
-    </div>
-  </div>
-</template>
+  <Dialog
+    v-model:visible="visible"
+    modal
+    :draggable="false"
+    :style="{ width: '36rem' }"
+    :breakpoints="{ '640px': '94vw' }"
+    aria-labelledby="recap-title"
+  >
+    <template #header>
+      <div class="grid gap-1">
+        <p class="m-0 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
+          {{ match.recap ? t(`recap.${match.recap.kind}`) : '' }}
+          <Tag v-if="match.recap?.source === 'ai'" :value="t('chat.ai')" icon="pi pi-sparkles" severity="info" rounded />
+        </p>
+        <h3 id="recap-title" class="m-0 text-2xl font-bold">{{ match.recap?.headline }}</h3>
+      </div>
+    </template>
 
-<style scoped>
-.backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  z-index: 10;
-}
-.modal {
-  max-width: 560px;
-  width: 100%;
-  max-height: 85vh;
-  overflow-y: auto;
-}
-.kind {
-  margin: 0;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-.ai {
-  margin-left: 6px;
-  border: 1px solid var(--accent-2);
-  border-radius: 999px;
-  padding: 0 6px;
-  font-size: 0.65rem;
-  color: var(--accent-2);
-  letter-spacing: normal;
-}
-h3 {
-  margin: 6px 0 10px;
-  font-size: 1.5rem;
-}
-p {
-  line-height: 1.45;
-}
-.pom {
-  color: var(--accent-2);
-}
-</style>
+    <template v-if="match.recap">
+      <p v-for="(para, i) in match.recap.text.split('\n')" :key="i" class="mb-3 mt-0 leading-relaxed">{{ para }}</p>
+      <!-- the template text already ends with this line, so it is only added for AI recaps -->
+      <p
+        v-if="match.recap.player_of_the_match && match.recap.source === 'ai'"
+        class="m-0 flex items-center gap-2 text-lime"
+      >
+        <i class="pi pi-trophy" aria-hidden="true" />
+        {{ t('recap.pom') }}: <strong>{{ match.recap.player_of_the_match.name }}</strong>
+      </p>
+    </template>
+
+    <template #footer>
+      <Button :label="t('recap.close')" autofocus @click="visible = false" />
+    </template>
+  </Dialog>
+</template>

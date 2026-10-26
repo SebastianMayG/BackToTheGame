@@ -41,9 +41,9 @@ def test_accessible_mode_describes_location():
     assert any("campo" in line.text or "área" in line.text for line in passes)
 
 
-def test_favourite_player_lines_are_marked():
+def test_favourite_player_lines_are_flagged():
     m, _ = lines()
     fav = m.meta.home.squad[9].id  # the starting striker
     _, out = lines(fav_player=fav)
-    marked = [line for ev, line in out if line and ev.player and ev.player.id == fav and line.text.startswith("⭐")]
+    marked = [line for ev, line in out if line and ev.player and ev.player.id == fav and line.favourite]
     assert marked

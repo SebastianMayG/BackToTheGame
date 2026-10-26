@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import AppPanel from '@/components/AppPanel.vue'
 import { useMatch } from '@/stores/match'
 
 const { t } = useI18n()
@@ -18,16 +19,19 @@ const y = (v: number) => H / 2 - v * (H / 2 - 4)
 const path = computed(() => {
   const pts = match.momentumHistory
   if (pts.length < 2) return ''
-  return `M ${x(pts[0].elapsed)} ${H / 2} ` + pts.map((p) => `L ${x(p.elapsed).toFixed(1)} ${y(p.value).toFixed(1)}`).join(' ') + ` L ${x(pts[pts.length - 1].elapsed)} ${H / 2} Z`
+  return (
+    `M ${x(pts[0].elapsed)} ${H / 2} ` +
+    pts.map((p) => `L ${x(p.elapsed).toFixed(1)} ${y(p.value).toFixed(1)}`).join(' ') +
+    ` L ${x(pts[pts.length - 1].elapsed)} ${H / 2} Z`
+  )
 })
 const goals = computed(() => match.moments.filter((m) => m.type === 'goal'))
 const colorOf = (side?: string | null) => (side === 'home' ? match.meta?.home.primary_color : match.meta?.away.primary_color)
 </script>
 
 <template>
-  <section class="panel">
-    <h2>{{ t('momentum.title') }}</h2>
-    <svg :viewBox="`0 0 ${W} ${H}`" class="chart" role="img" :aria-label="t('momentum.title')">
+  <AppPanel :title="t('momentum.title')" icon="pi-wave-pulse">
+    <svg :viewBox="`0 0 ${W} ${H}`" class="block h-20 w-full" role="img" :aria-label="t('momentum.title')">
       <defs>
         <clipPath id="top"><rect x="0" y="0" :width="W" :height="H / 2" /></clipPath>
         <clipPath id="bottom"><rect x="0" :y="H / 2" :width="W" :height="H / 2" /></clipPath>
@@ -38,25 +42,12 @@ const colorOf = (side?: string | null) => (side === 'home' ? match.meta?.home.pr
       <path :d="path" :fill="colorOf('away')" fill-opacity="0.75" clip-path="url(#bottom)" />
       <g v-for="g in goals" :key="g.id">
         <line :x1="x(g.elapsed)" :x2="x(g.elapsed)" y1="0" :y2="H" stroke="#fff" stroke-width="1" />
-        <text :x="x(g.elapsed)" :y="g.team === 'home' ? 9 : H - 2" font-size="9" text-anchor="middle">⚽</text>
+        <circle :cx="x(g.elapsed)" :cy="g.team === 'home' ? 6 : H - 6" r="3.2" fill="#fff" :stroke="colorOf(g.team)" stroke-width="1.5" />
       </g>
     </svg>
-    <div class="legend muted">
-      <span>{{ match.meta?.home.short_name }} ▲</span>
-      <span>▼ {{ match.meta?.away.short_name }}</span>
+    <div class="flex justify-between text-xs text-muted">
+      <span class="flex items-center gap-1"><i class="pi pi-caret-up" aria-hidden="true" />{{ match.meta?.home.short_name }}</span>
+      <span class="flex items-center gap-1">{{ match.meta?.away.short_name }}<i class="pi pi-caret-down" aria-hidden="true" /></span>
     </div>
-  </section>
+  </AppPanel>
 </template>
-
-<style scoped>
-.chart {
-  width: 100%;
-  height: 80px;
-  display: block;
-}
-.legend {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.72rem;
-}
-</style>

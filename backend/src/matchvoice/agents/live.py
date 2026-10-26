@@ -18,9 +18,7 @@ from matchvoice.models import CrewStatus, Lang, Moment, Recap, Side
 
 log = logging.getLogger(__name__)
 
-MIN_IMPORTANCE = 0.5  # below this, moments keep their template line...
-SPICE_IMPORTANCE = 0.4  # ...except an occasional smaller play, so the broadcast never goes flat
-SPICE_GAP = 240.0  # match seconds without an AI line before a smaller play gets one
+MIN_IMPORTANCE = 0.7  # only the big moments (goals, big chances, big saves...) are narrated by the AI
 MAX_FAILURES = 3  # consecutive failures before the crew goes to degraded mode
 CONCURRENT_CALLS = 2  # per stream, so a burst of moments does not flood the model
 EXCLUDED = {"half_time", "full_time"}  # the Recapper handles these
@@ -75,7 +73,6 @@ class LiveCrew:
         self.reason = ""
         self.failures = 0
         self.recent: list[str] = []
-        self._last_ai = -1e9  # match time of the last moment sent to the agents
         self._tasks: set[asyncio.Task[None]] = set()
         self._out: asyncio.Queue[tuple[str, str]] = asyncio.Queue()
         self._slots = asyncio.Semaphore(CONCURRENT_CALLS)
@@ -107,14 +104,11 @@ class LiveCrew:
             self._out.put_nowait(("crew_status", st.model_dump_json()))
 
     def submit(self, moment: Moment) -> None:
-        if not self.enabled or moment.type in EXCLUDED or moment.importance < SPICE_IMPORTANCE:
+        if not self.enabled or moment.importance < MIN_IMPORTANCE or moment.type in EXCLUDED:
             return
-        if moment.importance < MIN_IMPORTANCE and moment.elapsed - self._last_ai < SPICE_GAP:
-            return  # a small play only gets the AI when the broadcast has been quiet for a while
         if self.failures >= MAX_FAILURES:
             self._emit_status(moment.id, "degraded")
             return
-        self._last_ai = moment.elapsed
         task = asyncio.create_task(self._run(moment))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)

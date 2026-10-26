@@ -36,8 +36,11 @@ def _explanation_texts(e: Explanation) -> list[str]:
     return [e.why, e.tactical_angle, *e.key_numbers]
 
 
+BIG_MOMENT = 0.7  # same bar as the live crew: from here on a moment is a "big moment" (level 1)
+
+
 def _fallback(moment: Moment, langs: list[str]) -> list[CommentaryLine]:
-    level = 1 if moment.importance >= 0.75 else 2
+    level = 1 if moment.importance >= BIG_MOMENT else 2
     return [
         CommentaryLine(
             id=f"tpl-{moment.id}-{lang}",
@@ -129,7 +132,7 @@ def narrate_moment(
     if commentary is None:
         return MomentResult(_fallback(moment, langs), explanation, "template", attempts, latency, problems)
 
-    level = 1 if moment.importance >= 0.75 else 2
+    level = 1 if moment.importance >= BIG_MOMENT else 2
     lines = [
         CommentaryLine(
             id=f"ai-{moment.id}-{i}",

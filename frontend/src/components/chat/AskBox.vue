@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Button from 'primevue/button'
+import InputGroup from 'primevue/inputgroup'
+import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
+import ProgressBar from 'primevue/progressbar'
 import { AgentError, askMatch, fetchCatchup } from '@/api/client'
 import type { CommentaryLine } from '@/api/types'
 import { useMatch } from '@/stores/match'
@@ -27,6 +32,7 @@ function chatLine(speaker: 'system' | 'narrator', text: string, source: 'templat
     text,
     emotion: 'neutral',
     source,
+    favourite: false,
   }
 }
 
@@ -36,7 +42,7 @@ async function ask() {
   if (!o || q.length < 2 || asking.value) return
   asking.value = true
   error.value = ''
-  match.pushLine(chatLine('system', `❓ ${q}`, 'template'))
+  match.pushLine(chatLine('system', `${t('chat.you')}: ${q}`, 'template'))
   question.value = ''
   try {
     const res = await askMatch(o, q, match.elapsed / 60, profile.lang, profile.club)
@@ -66,48 +72,42 @@ async function catchUp() {
 </script>
 
 <template>
-  <div class="ask">
-    <form class="row" @submit.prevent="ask">
+  <div class="grid gap-2 border-t border-line pt-2.5">
+    <form @submit.prevent="ask">
       <label class="sr-only" for="ask-input">{{ t('chat.ask') }}</label>
-      <input
-        id="ask-input"
-        v-model="question"
-        type="text"
-        maxlength="300"
-        :placeholder="t('chat.ask')"
-        :disabled="!match.events.length || asking"
-      />
-      <button type="submit" :disabled="!match.events.length || asking || question.trim().length < 2">
-        {{ asking ? '…' : '▶' }}
-      </button>
+      <InputGroup>
+        <InputText
+          id="ask-input"
+          v-model="question"
+          maxlength="300"
+          :placeholder="t('chat.ask')"
+          :disabled="!match.events.length || asking"
+          fluid
+        />
+        <Button
+          type="submit"
+          icon="pi pi-send"
+          :aria-label="t('chat.send')"
+          :loading="asking"
+          :disabled="!match.events.length || asking || question.trim().length < 2"
+        />
+      </InputGroup>
     </form>
-    <small v-if="asking" class="muted" role="status">{{ t('chat.thinking') }}</small>
-    <small v-else-if="error" class="error" role="alert">{{ error }}</small>
-    <button class="catchup" :disabled="!match.events.length || loading" @click="catchUp">
-      ⏪ {{ t('chat.catchup') }}
-    </button>
+    <div v-if="asking" role="status" class="grid gap-1">
+      <ProgressBar mode="indeterminate" class="!h-1" />
+      <small class="text-muted">{{ t('chat.thinking') }}</small>
+    </div>
+    <Message v-else-if="error" severity="error" size="small" :closable="false">{{ error }}</Message>
+    <Button
+      icon="pi pi-history"
+      :label="t('chat.catchup')"
+      severity="secondary"
+      outlined
+      size="small"
+      class="justify-self-start"
+      :loading="loading"
+      :disabled="!match.events.length || loading"
+      @click="catchUp"
+    />
   </div>
 </template>
-
-<style scoped>
-.ask {
-  display: grid;
-  gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-}
-.row {
-  display: flex;
-  gap: 6px;
-}
-.row input {
-  flex: 1;
-  min-width: 0;
-}
-.catchup {
-  justify-self: start;
-}
-.error {
-  color: var(--danger);
-}
-</style>

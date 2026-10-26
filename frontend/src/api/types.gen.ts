@@ -238,6 +238,11 @@ export interface components {
              * @enum {string}
              */
             source: "template" | "ai";
+            /**
+             * Favourite
+             * @default false
+             */
+            favourite: boolean;
         };
         /**
          * CrewStatus
