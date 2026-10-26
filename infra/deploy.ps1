@@ -55,8 +55,18 @@ Write-Host "Building $image (a few minutes the first time)..."
 Run 'docker build' { docker build --tag $image $root }
 Run 'docker push' { docker push $image }
 
-# 5) Create or update the container app
+# 5) Create or update the container app.
+# Express environments reject any update of an app that has a system identity, so the identity is removed first
+# and granted again afterwards (step 6). The app keeps running its current image in the meantime.
 Set-Location $root
+$existing = az containerapp show --name $Name --resource-group $ResourceGroup --query identity.type -o tsv 2>$null
+$hadIdentity = $existing -and $existing -ne 'None'
+if ($hadIdentity) {
+  Write-Host 'Removing the managed identity so the app can be updated (it is granted again at the end)...'
+  Run 'az containerapp identity remove' {
+    az containerapp identity remove --name $Name --resource-group $ResourceGroup --system-assigned --output none
+  }
+}
 Run 'az containerapp up' {
   az containerapp up `
     --name $Name `
@@ -71,6 +81,9 @@ Run 'az containerapp up' {
     --target-port 8000 `
     --env-vars $vars
 }
+
+# 6) Give the (new) identity its roles again. The first deploy needs this too, so it always runs.
+& (Join-Path $PSScriptRoot 'grant-access.ps1') -Name $Name -ResourceGroup $ResourceGroup
 
 $fqdn = az containerapp show --name $Name --resource-group $ResourceGroup --query properties.configuration.ingress.fqdn -o tsv
 Write-Host "`nApp URL: https://$fqdn"
