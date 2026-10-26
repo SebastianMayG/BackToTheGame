@@ -32,7 +32,9 @@ foreach ($g in $grants) {
 if ($MinReplicas -gt 0) {
   # Express environments reject `update` while the app has a system identity, so this is best effort.
   Write-Host "Keeping at least $MinReplicas instance running (best effort)..."
+  $ErrorActionPreference = 'Continue' # stderr output must not stop the script on Windows PowerShell 5.1
   az containerapp update --name $Name --resource-group $ResourceGroup --min-replicas $MinReplicas --output none 2>$null
+  $ErrorActionPreference = 'Stop'
   if ($LASTEXITCODE -ne 0) { Write-Host 'Could not set the minimum replicas here; ping /api/health every few minutes to keep it warm.' }
 }
 

@@ -8,7 +8,8 @@ param(
   [string]$ResourceGroup = 'rg-backtothegame',
   [string]$Location = 'westus3',
   [string]$Environment = 'matchvoice-env',
-  [int]$MaxAiStreams = 3 # AI streams at the same time: this is what limits the model spend of the public demo
+  [int]$MaxAiStreams = 3, # AI streams at the same time: this is what limits the model spend of the public demo
+  [switch]$Recreate # delete and recreate an existing app (needed to update it on an Express environment)
 )
 
 $ErrorActionPreference = 'Stop'
@@ -56,16 +57,22 @@ Run 'docker build' { docker build --tag $image $root }
 Run 'docker push' { docker push $image }
 
 # 5) Create or update the container app.
-# Express environments reject any update of an app that has a system identity, so the identity is removed first
-# and granted again afterwards (step 6). The app keeps running its current image in the meantime.
+# Express environments reject any update of an app that has a system identity, and `az containerapp identity remove`
+# crashes there too. The only way to ship a new image is to delete the app and create it again (same name and
+# environment, so the URL stays the same), then grant the roles to its new identity (step 6). That means a few
+# minutes of downtime, so it only happens with -Recreate.
 Set-Location $root
+# Windows PowerShell 5.1 turns anything an `az` command writes to stderr (warnings, "app not found") into a
+# terminating error while ErrorActionPreference is Stop, so this lookup runs with Continue.
+$ErrorActionPreference = 'Continue'
 $existing = az containerapp show --name $Name --resource-group $ResourceGroup --query identity.type -o tsv 2>$null
-$hadIdentity = $existing -and $existing -ne 'None'
-if ($hadIdentity) {
-  Write-Host 'Removing the managed identity so the app can be updated (it is granted again at the end)...'
-  Run 'az containerapp identity remove' {
-    az containerapp identity remove --name $Name --resource-group $ResourceGroup --system-assigned --output none
+$ErrorActionPreference = 'Stop'
+if ($existing -and $existing -ne 'None') {
+  if (-not $Recreate) {
+    throw "The app '$Name' has a managed identity and Express environments cannot update it. The image $image is already pushed. Run this script again with -Recreate to delete and recreate the app (a few minutes of downtime, same URL)."
   }
+  Write-Host "Deleting the app '$Name' to recreate it..."
+  Run 'az containerapp delete' { az containerapp delete --name $Name --resource-group $ResourceGroup --yes --output none }
 }
 Run 'az containerapp up' {
   az containerapp up `
