@@ -77,7 +77,11 @@ watch(
 )
 watch(
   () => profile.mode,
-  (m) => document.documentElement.classList.toggle('accessible', m === 'accessible'),
+  (m) => {
+    // Accessible mode is the only dark theme: black background, white lines, yellow accent.
+    document.documentElement.classList.toggle('accessible', m === 'accessible')
+    document.documentElement.classList.toggle('app-dark', m === 'accessible')
+  },
   { immediate: true },
 )
 

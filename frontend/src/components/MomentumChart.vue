@@ -41,8 +41,8 @@ const colorOf = (side?: string | null) => (side === 'home' ? match.meta?.home.pr
       <path :d="path" :fill="colorOf('home')" fill-opacity="0.75" clip-path="url(#top)" />
       <path :d="path" :fill="colorOf('away')" fill-opacity="0.75" clip-path="url(#bottom)" />
       <g v-for="g in goals" :key="g.id">
-        <line :x1="x(g.elapsed)" :x2="x(g.elapsed)" y1="0" :y2="H" stroke="#fff" stroke-width="1" />
-        <circle :cx="x(g.elapsed)" :cy="g.team === 'home' ? 6 : H - 6" r="3.2" fill="#fff" :stroke="colorOf(g.team)" stroke-width="1.5" />
+        <line :x1="x(g.elapsed)" :x2="x(g.elapsed)" y1="0" :y2="H" stroke="var(--ink)" stroke-width="1" />
+        <circle :cx="x(g.elapsed)" :cy="g.team === 'home' ? 6 : H - 6" r="3.2" fill="var(--panel)" :stroke="colorOf(g.team)" stroke-width="1.5" />
       </g>
     </svg>
     <div class="flex justify-between text-xs text-muted">

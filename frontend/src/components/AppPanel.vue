@@ -7,7 +7,7 @@ defineProps<{ title?: string; icon?: string }>()
 <template>
   <Card
     :pt="{
-      root: { class: 'flex min-h-0 flex-col !rounded-xl border border-line !shadow-none' },
+      root: { class: 'flex min-h-0 flex-col !rounded-lg border border-line !shadow-none' },
       body: { class: 'flex min-h-0 flex-1 flex-col gap-2 !p-3.5' },
       title: { class: '!text-base' },
       content: { class: 'flex min-h-0 flex-1 flex-col' },

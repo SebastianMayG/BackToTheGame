@@ -4,7 +4,7 @@ import { useLayerEvents } from './useLayerEvents'
 
 const { events, project } = useLayerEvents(['shot'])
 
-const COLORS: Record<string, string> = { goal: '#22c55e', saved: '#fbbf24', blocked: '#f43f5e', off_target: '#cbd5e1' }
+const COLORS: Record<string, string> = { goal: '#f2d37a', saved: '#ffffff', blocked: '#ff8a73', off_target: '#d8d2c4' }
 
 const shots = computed(() =>
   events.value.map((e) => {

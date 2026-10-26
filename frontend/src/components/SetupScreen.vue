@@ -64,15 +64,15 @@ watch(
 <template>
   <main class="mx-auto max-w-5xl px-4 py-8">
     <div class="mb-5">
-      <h1 class="m-0 flex items-center gap-3 text-4xl font-extrabold max-sm:text-3xl">
+      <h1 class="m-0 flex items-center gap-3 font-display text-6xl font-bold uppercase tracking-wide max-sm:text-4xl">
         <img class="size-[1em]" src="/soccer.svg" alt="" /> Back to the game
       </h1>
       <p class="mb-0 mt-1 text-muted">{{ t('app.tagline') }}</p>
     </div>
 
-    <Card :pt="{ root: { class: '!rounded-xl border border-line !shadow-none' }, body: { class: '!p-5' } }">
+    <Card :pt="{ root: { class: '!rounded-lg border border-line !shadow-none' }, body: { class: '!p-5' } }">
       <template #title>
-        <h2 class="m-0 text-xl font-semibold">{{ t('setup.title') }}</h2>
+        <h2 class="m-0 font-display text-2xl font-bold uppercase tracking-wider">{{ t('setup.title') }}</h2>
       </template>
       <template #content>
         <form class="grid gap-5" @submit.prevent="emit('start')">
@@ -81,7 +81,7 @@ watch(
           <fieldset class="m-0 border-0 p-0">
             <legend class="mb-1.5 p-0 text-sm text-muted">{{ t('setup.match') }}</legend>
             <div class="grid items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
-              <label class="grid gap-1 text-sm text-muted">
+              <label class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 text-sm text-muted">
                 {{ t('setup.home') }}
                 <Select
                   v-model="profile.home"
@@ -93,7 +93,7 @@ watch(
                 />
               </label>
               <span class="pb-2 text-center text-muted max-sm:hidden">vs</span>
-              <label class="grid gap-1 text-sm text-muted">
+              <label class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 text-sm text-muted">
                 {{ t('setup.away') }}
                 <Select
                   v-model="profile.away"
@@ -114,7 +114,7 @@ watch(
                 v-for="m in MODES"
                 :key="m.id"
                 type="button"
-                class="grid cursor-pointer gap-1 rounded-xl border bg-raised p-3 text-left text-inherit transition-colors hover:border-primary"
+                class="grid cursor-pointer gap-1 rounded-lg border bg-raised p-3 text-left text-inherit transition-colors hover:border-primary"
                 :class="profile.mode === m.id ? 'border-primary ring-1 ring-primary' : 'border-line'"
                 :aria-pressed="profile.mode === m.id"
                 @click="profile.mode = m.id"
@@ -128,11 +128,11 @@ watch(
           </fieldset>
 
           <div class="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
-            <label class="grid gap-1 text-sm text-muted">
+            <label class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 text-sm text-muted">
               {{ t('setup.lang') }}
               <Select v-model="profile.lang" :options="LANGS" option-label="label" option-value="id" fluid />
             </label>
-            <label class="grid gap-1 text-sm text-muted">
+            <label class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 text-sm text-muted">
               {{ t('setup.club') }}
               <Select
                 v-model="profile.club"
@@ -144,7 +144,7 @@ watch(
                 fluid
               />
             </label>
-            <label class="grid gap-1 text-sm text-muted">
+            <label class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 text-sm text-muted">
               {{ t('setup.player') }}
               <Select
                 v-model="profile.player"
@@ -157,7 +157,7 @@ watch(
                 fluid
               />
             </label>
-            <label class="grid gap-1 text-sm text-muted">
+            <label class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 text-sm text-muted">
               {{ t('setup.speed') }}
               <Select v-model="profile.speed" :options="speedOptions" option-label="label" option-value="id" fluid />
             </label>

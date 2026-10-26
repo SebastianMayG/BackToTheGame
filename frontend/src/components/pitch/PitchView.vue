@@ -199,7 +199,7 @@ const label = computed(() => {
 }
 .halo {
   fill: none;
-  stroke: var(--accent-2);
+  stroke: var(--gold-light);
   stroke-width: 0.5;
   animation: pulse 1.4s ease-in-out infinite;
 }
@@ -215,16 +215,16 @@ const label = computed(() => {
   }
 }
 .tag rect {
-  fill: rgba(0, 0, 0, 0.75);
-  stroke: var(--accent);
+  fill: rgba(27, 31, 42, 0.85);
+  stroke: var(--on-ink);
   stroke-width: 0.2;
 }
 .tag rect.shot {
-  stroke: var(--warn);
+  stroke: var(--gold-light);
 }
 .tag text {
   font-size: 2px;
-  fill: #fff;
+  fill: var(--on-ink);
   text-anchor: middle;
   font-weight: 700;
 }
@@ -236,15 +236,17 @@ const label = computed(() => {
   display: flex;
   gap: 10px;
   align-items: center;
-  background: linear-gradient(90deg, rgba(4, 18, 26, 0.95), rgba(4, 18, 26, 0.75));
-  border-left: 5px solid var(--accent);
+  background: var(--ink);
+  color: var(--on-ink);
+  border-left: 5px solid var(--gold-light);
   padding: 10px 14px;
   border-radius: 6px;
   font-weight: 700;
   font-size: clamp(0.85rem, 1.6vw, 1.15rem);
 }
 .lower-third .clock {
-  color: var(--accent);
+  font-family: var(--font-display);
+  color: var(--gold-light);
   font-variant-numeric: tabular-nums;
 }
 .lt-enter-active,

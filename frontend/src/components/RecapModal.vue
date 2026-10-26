@@ -33,7 +33,7 @@ const visible = computed({
           {{ match.recap ? t(`recap.${match.recap.kind}`) : '' }}
           <Tag v-if="match.recap?.source === 'ai'" :value="t('chat.ai')" icon="pi pi-sparkles" severity="info" rounded />
         </p>
-        <h3 id="recap-title" class="m-0 text-2xl font-bold">{{ match.recap?.headline }}</h3>
+        <h3 id="recap-title" class="m-0 font-display text-3xl font-bold uppercase tracking-wide">{{ match.recap?.headline }}</h3>
       </div>
     </template>
 

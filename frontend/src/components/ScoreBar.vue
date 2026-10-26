@@ -30,9 +30,9 @@ const rhythmClass = computed(() => RHYTHM_CLASS[rhythm.value] ?? 'text-muted')
 <template>
   <header
     v-if="match.meta"
-    class="relative grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-xl border border-line bg-panel px-3.5 pb-4 pt-2.5"
+    class="relative grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-lg border border-line bg-panel px-3.5 pb-4 pt-2.5"
   >
-    <div class="flex min-w-0 items-center gap-2.5 font-bold">
+    <div class="flex min-w-0 items-center gap-2.5 font-display text-xl font-bold uppercase tracking-wide">
       <span
         class="size-[18px] flex-none rounded-full border-[3px]"
         :style="{ background: match.meta.home.primary_color, borderColor: match.meta.home.secondary_color }"
@@ -42,7 +42,7 @@ const rhythmClass = computed(() => RHYTHM_CLASS[rhythm.value] ?? 'text-muted')
     </div>
 
     <div class="text-center">
-      <div class="text-3xl font-extrabold leading-none tabular-nums max-sm:text-2xl" aria-live="polite">
+      <div class="font-display text-5xl font-bold leading-none tabular-nums max-sm:text-4xl" aria-live="polite">
         <span>{{ match.score.home }}</span><span class="mx-2 text-muted">-</span><span>{{ match.score.away }}</span>
       </div>
       <div class="mt-1 flex items-center justify-center gap-1.5 text-sm text-muted tabular-nums">
@@ -51,7 +51,7 @@ const rhythmClass = computed(() => RHYTHM_CLASS[rhythm.value] ?? 'text-muted')
       </div>
     </div>
 
-    <div class="flex min-w-0 items-center justify-end gap-2.5 font-bold">
+    <div class="flex min-w-0 items-center justify-end gap-2.5 font-display text-xl font-bold uppercase tracking-wide">
       <i v-if="view.favSide === 'away'" class="pi pi-star-fill text-lime" :aria-label="t('fav.title')" />
       <span class="truncate max-sm:text-sm">{{ match.meta.away.name }}</span>
       <span

@@ -4,25 +4,29 @@
 /* App palette. Components use these through Tailwind (text-muted, bg-panel, border-line...) and the pitch SVG uses
    them directly. PrimeVue reads its own --p-* tokens, which the preset in theme.ts sets from the same colours. */
 :root {
-  --bg: #0b1020;
-  --panel: #131a2e;
-  --panel-2: #1a2340;
-  --line: #26314f;
-  --text: #e8ecf6;
-  --muted: #94a0bf;
-  --accent: #22d3ee;
-  --accent-2: #a3e635;
-  --danger: #f43f5e;
-  --warn: #fbbf24;
-  --grass-1: #15803d;
-  --grass-2: #166534;
+  --bg: #f4f1ea;
+  --panel: #fffdf8;
+  --panel-2: #f0ece2;
+  --line: #ddd6c8;
+  --text: #1b1f2a;
+  --muted: #6b6558;
+  --accent: #1f6b45; /* interaction: pitch green */
+  --accent-2: #8f5d12; /* big moments: old gold (text on paper) */
+  --danger: #b4412a;
+  --warn: #a16207;
+  --ink: #1b1f2a; /* dark overlays on the pitch */
+  --on-ink: #f4f1ea;
+  --gold-light: #e8c46a; /* gold on a dark background */
+  --grass-1: #3f7d58;
+  --grass-2: #377250;
   --pitch-line: rgba(255, 255, 255, 0.85);
-  --radius: 12px;
+  --radius: 8px;
   --fs: 15px;
 }
 
 @theme inline {
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Source Sans 3 Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --color-muted: var(--muted);
   --color-lime: var(--accent-2);
   --color-danger: var(--danger);
@@ -30,6 +34,8 @@
   --color-line: var(--line);
   --color-panel: var(--panel);
   --color-raised: var(--panel-2);
+  --color-ink: var(--ink);
+  --color-on-ink: var(--on-ink);
 }
 
 /* Accessible mode: black background, white lines, yellow accent and bigger type. The first block is the app palette,
@@ -46,6 +52,9 @@
   --grass-1: #0b3d1e;
   --grass-2: #0b3d1e;
   --fs: 18px;
+  --ink: #000;
+  --on-ink: #fff;
+  --gold-light: #ffd400;
 
   --p-primary-color: #ffd400;
   --p-primary-contrast-color: #000000;
@@ -94,9 +103,10 @@ body {
 /* Small uppercase heading used at the top of every panel. */
 .panel-title {
   margin: 0 0 0.6rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
 }

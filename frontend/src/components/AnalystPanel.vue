@@ -131,12 +131,12 @@ const fmt = (v: number | string) => (typeof v === 'number' ? +v.toFixed(2) : v)
           :aria-label="t('analyst.layers')"
           @update:model-value="(l: Layer) => view.setLayer(l)"
         />
-        <div class="grid gap-2 sm:grid-cols-2">
-          <label class="grid gap-0.5 text-xs text-muted">
+        <div class="grid gap-2 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
+          <label class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-0.5 text-xs text-muted">
             {{ t('analyst.team') }}
             <Select v-model="view.layerTeam" :options="teamOptions" option-label="label" option-value="value" fluid />
           </label>
-          <label class="grid gap-0.5 text-xs text-muted">
+          <label class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-0.5 text-xs text-muted">
             {{ t('analyst.player') }}
             <Select
               v-model="view.layerPlayer"
@@ -154,7 +154,7 @@ const fmt = (v: number | string) => (typeof v === 'number' ? +v.toFixed(2) : v)
 
       <fieldset class="m-0 grid gap-2 rounded-xl border border-line px-2.5 pb-2.5 pt-1">
         <legend class="px-1 text-xs text-muted">{{ t('analyst.compare') }}</legend>
-        <div class="grid gap-2 sm:grid-cols-2">
+        <div class="grid gap-2 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
           <Select
             v-model="view.compareA"
             :options="allPlayers"
