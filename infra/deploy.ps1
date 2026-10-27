@@ -4,7 +4,7 @@
 # ACR Tasks (build in the cloud). The values in .env go to the app as environment variables; the .env file
 # itself never goes into the image (see .dockerignore).
 param(
-  [string]$Name = 'matchvoice',
+  [string]$Name = 'backtothegame',
   [string]$ResourceGroup = 'rg-backtothegame',
   [string]$Location = 'westus3',
   [string]$Environment = 'matchvoice-env',

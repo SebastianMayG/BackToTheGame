@@ -1,7 +1,7 @@
 # Lets the deployed app call Foundry and Azure AI Speech with its own identity (no keys). Run it once, after deploy.ps1:
 #   powershell -ExecutionPolicy Bypass -File .\infra\grant-access.ps1
 param(
-  [string]$Name = 'matchvoice',
+  [string]$Name = 'backtothegame',
   [string]$ResourceGroup = 'rg-backtothegame',
   [string]$FoundryAccount = 'al064488-6492-resource',
   [string]$SpeechAccount = 'btg-speech-hack',

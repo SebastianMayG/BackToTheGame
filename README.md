@@ -3,7 +3,7 @@
 **A live, multi-agent match narrator that explains the game and talks to every fan in their own way.**
 Built for the Microsoft + Premier League *Inside the Game* Developer Hackathon (2026), category **Best Multi-Agent System**.
 
-**Live demo:** https://matchvoice.agreeablemeadow-1527bc53.westus3.azurecontainerapps.io
+**Live demo:** https://backtothegame.agreeablemeadow-1527bc53.westus3.azurecontainerapps.io
 (open it and press *Kick off*; every visit plays a different match)
 
 A pitch on the left, a live narration chat on the right. A crew of AI agents watches the match as it happens, finds the big moments, explains them with evidence and speaks them aloud. Every viewer gets their own version of the same match: a **fan** who follows a club and a favourite player, an **analyst** who wants layers and numbers, or a **blind or low-vision viewer** who listens to a descriptive broadcast. English and Spanish.
